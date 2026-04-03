@@ -17,7 +17,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { Customer } from "../backend.d";
+import type { Customer } from "../backendTypes";
 import { useUpdateCustomer } from "../hooks/useQueries";
 
 const COUNTRY_CODES = [

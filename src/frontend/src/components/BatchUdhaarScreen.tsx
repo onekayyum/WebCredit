@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Product } from "../backend.d";
+import type { Product } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
 import { useCSVProducts } from "../hooks/useCSVProducts";
 import {

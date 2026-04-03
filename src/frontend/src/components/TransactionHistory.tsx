@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { CustomerBalance } from "../backend.d";
+import type { CustomerBalance } from "../backendTypes";
 import { useDeleteTransaction, useTransactions } from "../hooks/useQueries";
 import { formatCurrency, formatTimestamp, getInitials } from "../utils/format";
 

@@ -4,9 +4,10 @@ import type {
   Product,
   Transaction,
   backendInterface,
-} from "./backend.d";
+} from "./backendTypes";
 
-const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "http://localhost:3001";
+const API_BASE =
+  import.meta.env.VITE_BACKEND_BASE_URL || "http://localhost:3001";
 
 function toBigInt(value: string | number | bigint): bigint {
   return typeof value === "bigint" ? value : BigInt(value);
@@ -72,7 +73,12 @@ async function invoke(method: string, payload: object = {}): Promise<any> {
 export function createRestBackend(): backendInterface {
   return {
     async addBatchTransaction(customerId, totalAmount, itemsJson, note) {
-      const result = await invoke("addBatchTransaction", { customerId: customerId.toString(), totalAmount, itemsJson, note });
+      const result = await invoke("addBatchTransaction", {
+        customerId: customerId.toString(),
+        totalAmount,
+        itemsJson,
+        note,
+      });
       return result ? mapTransaction(result) : null;
     },
     async addCustomer(name, mobile) {
@@ -84,12 +90,24 @@ export function createRestBackend(): backendInterface {
       return result ? mapProduct(result) : null;
     },
     async addTransaction(customerId, productName, note, amount, txType) {
-      const result = await invoke("addTransaction", { customerId: customerId.toString(), productName, note, amount, txType });
+      const result = await invoke("addTransaction", {
+        customerId: customerId.toString(),
+        productName,
+        note,
+        amount,
+        txType,
+      });
       return result ? mapTransaction(result) : null;
     },
     async bulkImportProducts(productList) {
-      const normalized = productList.map((p) => ({ ...p, id: p.id.toString(), createdAt: p.createdAt.toString() }));
-      const result = await invoke("bulkImportProducts", { productList: normalized });
+      const normalized = productList.map((p) => ({
+        ...p,
+        id: p.id.toString(),
+        createdAt: p.createdAt.toString(),
+      }));
+      const result = await invoke("bulkImportProducts", {
+        productList: normalized,
+      });
       return [toBigInt(result[0]), toBigInt(result[1])];
     },
     async deleteCustomer(id) {
@@ -110,7 +128,9 @@ export function createRestBackend(): backendInterface {
       return result.map(mapProduct);
     },
     async getCustomerBalanceSummary(customerId) {
-      const result = await invoke("getCustomerBalanceSummary", { customerId: customerId.toString() });
+      const result = await invoke("getCustomerBalanceSummary", {
+        customerId: customerId.toString(),
+      });
       return result ? mapBalance(result) : null;
     },
     async getCustomersSortedByBalance() {
@@ -122,11 +142,15 @@ export function createRestBackend(): backendInterface {
       return result.map(mapBalance);
     },
     async getInactiveCustomers(days) {
-      const result = await invoke("getInactiveCustomers", { days: days.toString() });
+      const result = await invoke("getInactiveCustomers", {
+        days: days.toString(),
+      });
       return result.map(mapBalance);
     },
     async getTransactionsForCustomer(customerId) {
-      const result = await invoke("getTransactionsForCustomer", { customerId: customerId.toString() });
+      const result = await invoke("getTransactionsForCustomer", {
+        customerId: customerId.toString(),
+      });
       return result.map(mapTransaction);
     },
     async searchCustomers(term) {
@@ -141,7 +165,12 @@ export function createRestBackend(): backendInterface {
       return invoke("updateCustomer", { id: id.toString(), name, mobile });
     },
     async updateProduct(id, name, price, barcode) {
-      return invoke("updateProduct", { id: id.toString(), name, price, barcode });
+      return invoke("updateProduct", {
+        id: id.toString(),
+        name,
+        price,
+        barcode,
+      });
     },
   };
 }

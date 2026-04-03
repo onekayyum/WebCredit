@@ -33,7 +33,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Screen } from "../App";
-import type { Product } from "../backend.d";
+import type { Product } from "../backendTypes";
 import { useCSVProducts } from "../hooks/useCSVProducts";
 import {
   useAddProduct,

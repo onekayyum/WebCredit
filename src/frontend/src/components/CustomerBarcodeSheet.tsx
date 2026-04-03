@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sheet";
 import { Loader2, Printer, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { Customer } from "../backend.d";
+import type { Customer } from "../backendTypes";
 
 interface Props {
   open: boolean;

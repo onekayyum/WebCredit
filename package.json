@@ -1,24 +1,17 @@
 {
-  "name": "@caffeine/template-app",
+  "name": "webcredit",
+  "version": "2.0.0",
+  "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=16.0.0",
-    "pnpm": ">=7.0.0",
-    "npm": "please use pnpm"
-  },
   "scripts": {
-    "build": "pnpm -r --if-present run build",
-    "typecheck": "pnpm -r --if-present run typecheck",
-    "check": "pnpm -r --if-present run check",
-    "fix": "pnpm -r --if-present run fix",
-    "start": "node backend-server.js"
-  },
-  "devDependencies": {
-    "sharp": "^0.34.4"
+    "install:frontend": "npm install --prefix src/frontend",
+    "build:frontend": "npm run build --prefix src/frontend",
+    "start": "node backend-server.js",
+    "dev:frontend": "npm run dev --prefix src/frontend"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
-    "better-sqlite3": "^11.8.1"
+    "express": "^4.21.2"
   }
 }

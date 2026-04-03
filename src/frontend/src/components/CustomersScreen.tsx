@@ -15,7 +15,7 @@ import { Menu, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Screen } from "../App";
-import type { Customer } from "../backend.d";
+import type { Customer } from "../backendTypes";
 import { useCustomerPhoto } from "../hooks/useCustomerPhoto";
 import { useAllCustomers, useDeleteCustomer } from "../hooks/useQueries";
 import { formatCurrency, getInitials } from "../utils/format";

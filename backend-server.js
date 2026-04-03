@@ -11,6 +11,9 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "app.db"
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 
+const FRONTEND_DIST = path.join(process.cwd(), "src", "frontend", "dist");
+const HAS_FRONTEND_DIST = fs.existsSync(path.join(FRONTEND_DIST, "index.html"));
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY,
@@ -174,6 +177,16 @@ app.post("/api/backend/:method", (req, res) => {
     return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
+
+if (HAS_FRONTEND_DIST) {
+  app.use(express.static(FRONTEND_DIST));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/") || req.path === "/health") {
+      return next();
+    }
+    return res.sendFile(path.join(FRONTEND_DIST, "index.html"));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
