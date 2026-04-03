@@ -10,9 +10,15 @@
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
     "check": "pnpm -r --if-present run check",
-    "fix": "pnpm -r --if-present run fix"
+    "fix": "pnpm -r --if-present run fix",
+    "start": "node backend-server.js"
   },
   "devDependencies": {
     "sharp": "^0.34.4"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "better-sqlite3": "^11.8.1"
   }
 }
