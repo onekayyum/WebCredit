@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Menu, ScanLine, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Screen } from "../App";
-import type { CustomerBalance } from "../backend.d";
+import type { CustomerBalance } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
 import { useCustomerPhoto } from "../hooks/useCustomerPhoto";
 import { useAllCustomers } from "../hooks/useQueries";

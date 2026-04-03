@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CustomerBalance, Product, Transaction } from "../backend.d";
+import type { CustomerBalance, Product, Transaction } from "../backendTypes";
 import { useActor } from "./useActor";
 
 export function useAllCustomers() {

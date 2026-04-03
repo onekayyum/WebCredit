@@ -217,7 +217,7 @@ export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Platform</span>
-              <span className="font-medium">Internet Computer</span>
+              <span className="font-medium">Node.js + SQLite</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Storage</span>
