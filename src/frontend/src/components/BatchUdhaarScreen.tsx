@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Product } from "../backend.d";
+import type { Product } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
 import { useCSVProducts } from "../hooks/useCSVProducts";
 import {
@@ -211,7 +211,12 @@ export function BatchUdhaarScreen({
   useEffect(() => {
     if (scannerOpen && isActive) {
       const BarcodeDetectorAPI = (window as any).BarcodeDetector;
-      if (!BarcodeDetectorAPI) return;
+      if (!BarcodeDetectorAPI) {
+        toast.error(
+          "Barcode scanning is not supported in this browser. Try Chrome on Android.",
+        );
+        return;
+      }
       const detector = new BarcodeDetectorAPI({
         formats: [
           "ean_13",
@@ -284,8 +289,16 @@ export function BatchUdhaarScreen({
   ]);
 
   const openScanner = async () => {
+    console.debug("[scan][batch] scan button clicked");
     setScannerOpen(true);
-    await startCamera();
+    const started = await startCamera();
+    console.debug("[scan][batch] startCamera result", { started });
+    if (!started) {
+      toast.error(
+        "Could not start camera. Use HTTPS (or localhost) and allow camera permission.",
+      );
+      setScannerOpen(false);
+    }
   };
 
   const closeScanner = () => {

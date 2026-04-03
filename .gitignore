@@ -1,0 +1,4 @@
+node_modules/
+src/frontend/node_modules/
+data/
+.DS_Store

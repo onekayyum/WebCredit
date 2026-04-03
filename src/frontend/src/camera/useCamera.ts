@@ -13,6 +13,14 @@ export interface CameraError {
   message: string;
 }
 
+function isLocalhostHost(): boolean {
+  return (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "[::1]"
+  );
+}
+
 export const useCamera = (config: CameraConfig = {}) => {
   const {
     facingMode = "environment",
@@ -33,18 +41,28 @@ export const useCamera = (config: CameraConfig = {}) => {
   const streamRef = useRef<MediaStream | null>(null);
   const isMountedRef = useRef(true);
 
-  // Check browser support
   useEffect(() => {
-    const supported = !!navigator.mediaDevices?.getUserMedia;
-    setIsSupported(supported);
-  }, []);
+    const hasMedia = !!navigator.mediaDevices?.getUserMedia;
+    const secure = window.isSecureContext || isLocalhostHost();
+    const supported = hasMedia && secure;
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      cleanup();
-    };
+    console.debug("[camera] support check", {
+      hasMediaDevices: hasMedia,
+      secureContext: window.isSecureContext,
+      protocol: window.location.protocol,
+      host: window.location.host,
+      localhostException: isLocalhostHost(),
+      supported,
+    });
+
+    setIsSupported(supported);
+    if (!supported) {
+      setError({
+        type: "not-supported",
+        message:
+          "Camera requires HTTPS (or localhost) and a supported browser.",
+      });
+    }
   }, []);
 
   const cleanup = useCallback(() => {
@@ -62,6 +80,23 @@ export const useCamera = (config: CameraConfig = {}) => {
     setIsActive(false);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
+
+  const waitForVideoElement =
+    useCallback(async (): Promise<HTMLVideoElement | null> => {
+      const start = Date.now();
+      while (Date.now() - start < 1500) {
+        if (videoRef.current) return videoRef.current;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      return null;
+    }, []);
+
   const createMediaStream = useCallback(
     async (facing: "user" | "environment") => {
       try {
@@ -73,7 +108,11 @@ export const useCamera = (config: CameraConfig = {}) => {
           },
         };
 
+        console.debug("[camera] requesting getUserMedia", constraints);
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.debug("[camera] getUserMedia success", {
+          tracks: stream.getTracks().map((t) => t.kind),
+        });
 
         if (!isMountedRef.current) {
           for (const track of stream.getTracks()) {
@@ -84,18 +123,24 @@ export const useCamera = (config: CameraConfig = {}) => {
 
         return stream;
       } catch (err: any) {
+        console.error("[camera] getUserMedia failed", err);
+
         let errorType: CameraError["type"] = "unknown";
         let errorMessage = "Failed to access camera";
 
-        if (err.name === "NotAllowedError") {
+        if (err?.name === "NotAllowedError") {
           errorType = "permission";
-          errorMessage = "Camera permission denied";
-        } else if (err.name === "NotFoundError") {
+          errorMessage =
+            "Camera permission denied. Please allow camera access in browser settings.";
+        } else if (err?.name === "NotFoundError") {
           errorType = "not-found";
           errorMessage = "No camera device found";
-        } else if (err.name === "NotSupportedError") {
+        } else if (err?.name === "NotSupportedError") {
           errorType = "not-supported";
-          errorMessage = "Camera is not supported";
+          errorMessage = "Camera is not supported in this browser";
+        } else if (err?.name === "NotReadableError") {
+          errorType = "unknown";
+          errorMessage = "Camera is already in use by another application";
         }
 
         throw { type: errorType, message: errorMessage };
@@ -104,44 +149,63 @@ export const useCamera = (config: CameraConfig = {}) => {
     [width, height],
   );
 
-  const setupVideo = useCallback(async (stream: MediaStream) => {
-    if (!videoRef.current) return false;
-
-    const video = videoRef.current;
-    video.srcObject = stream;
-
-    return new Promise<boolean>((resolve) => {
-      const onLoadedMetadata = () => {
-        video.removeEventListener("loadedmetadata", onLoadedMetadata);
-        video.removeEventListener("error", onError);
-
-        // Try to play the video
-        video.play().catch((err) => {
-          console.warn("Video autoplay failed:", err);
-          // This is often okay - user interaction might be needed
-        });
-
-        resolve(true);
-      };
-
-      const onError = () => {
-        video.removeEventListener("loadedmetadata", onLoadedMetadata);
-        video.removeEventListener("error", onError);
-        resolve(false);
-      };
-
-      video.addEventListener("loadedmetadata", onLoadedMetadata);
-      video.addEventListener("error", onError);
-
-      // Handle case where metadata is already loaded
-      if (video.readyState >= 1) {
-        onLoadedMetadata();
+  const setupVideo = useCallback(
+    async (stream: MediaStream) => {
+      const video = await waitForVideoElement();
+      if (!video) {
+        console.error("[camera] video element not mounted in time");
+        return false;
       }
-    });
-  }, []);
+
+      video.srcObject = stream;
+
+      return new Promise<boolean>((resolve) => {
+        const onLoadedMetadata = () => {
+          video.removeEventListener("loadedmetadata", onLoadedMetadata);
+          video.removeEventListener("error", onError);
+
+          video
+            .play()
+            .then(() => {
+              console.debug("[camera] video playback started");
+              resolve(true);
+            })
+            .catch((err) => {
+              console.warn("[camera] video play() failed", err);
+              resolve(true);
+            });
+        };
+
+        const onError = () => {
+          video.removeEventListener("loadedmetadata", onLoadedMetadata);
+          video.removeEventListener("error", onError);
+          console.error("[camera] video element error");
+          resolve(false);
+        };
+
+        video.addEventListener("loadedmetadata", onLoadedMetadata);
+        video.addEventListener("error", onError);
+
+        if (video.readyState >= 1) {
+          onLoadedMetadata();
+        }
+      });
+    },
+    [waitForVideoElement],
+  );
 
   const startCamera = useCallback(async (): Promise<boolean> => {
+    console.debug("[camera] startCamera called");
+
     if (isSupported === false || isLoading) {
+      console.warn("[camera] start blocked", { isSupported, isLoading });
+      if (isSupported === false) {
+        setError({
+          type: "not-supported",
+          message:
+            "Camera is unavailable. Use HTTPS (or localhost) and a modern browser.",
+        });
+      }
       return false;
     }
 
@@ -149,7 +213,6 @@ export const useCamera = (config: CameraConfig = {}) => {
     setError(null);
 
     try {
-      // Clean up any existing stream
       cleanup();
 
       const stream = await createMediaStream(currentFacingMode);
@@ -169,7 +232,6 @@ export const useCamera = (config: CameraConfig = {}) => {
       if (isMountedRef.current) {
         setError(err);
       }
-
       cleanup();
       return false;
     } finally {
@@ -180,9 +242,9 @@ export const useCamera = (config: CameraConfig = {}) => {
   }, [
     isSupported,
     isLoading,
-    currentFacingMode,
     cleanup,
     createMediaStream,
+    currentFacingMode,
     setupVideo,
   ]);
 
@@ -193,7 +255,6 @@ export const useCamera = (config: CameraConfig = {}) => {
     cleanup();
     setError(null);
 
-    // Small delay to ensure cleanup is complete
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (isMountedRef.current) {
@@ -215,13 +276,8 @@ export const useCamera = (config: CameraConfig = {}) => {
       setError(null);
 
       try {
-        // Clean up current stream
         cleanup();
-
-        // Update facing mode
         setCurrentFacingMode(targetFacingMode);
-
-        // Small delay to ensure cleanup
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         const stream = await createMediaStream(targetFacingMode);
@@ -278,8 +334,6 @@ export const useCamera = (config: CameraConfig = {}) => {
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
-
-      // Set canvas size to match video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
@@ -289,7 +343,6 @@ export const useCamera = (config: CameraConfig = {}) => {
         return;
       }
 
-      // Mirror front camera image
       if (currentFacingMode === "user") {
         ctx.scale(-1, 1);
         ctx.drawImage(video, -canvas.width, 0);
@@ -316,21 +369,16 @@ export const useCamera = (config: CameraConfig = {}) => {
   }, [isActive, format, quality, currentFacingMode]);
 
   return {
-    // State
     isActive,
     isSupported,
     error,
     isLoading,
     currentFacingMode,
-
-    // Actions
     startCamera,
     stopCamera,
     capturePhoto,
     switchCamera,
     retry,
-
-    // Refs for components
     videoRef,
     canvasRef,
   };

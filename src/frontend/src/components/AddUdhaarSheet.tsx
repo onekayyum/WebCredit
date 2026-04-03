@@ -10,7 +10,7 @@ import {
 import { Camera, Keyboard, Loader2, ScanLine, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Product } from "../backend.d";
+import type { Product } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
 import {
   useAddProduct,
@@ -95,7 +95,12 @@ export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
   useEffect(() => {
     if (mode === "scanner" && isActive) {
       const BarcodeDetectorAPI = (window as any).BarcodeDetector;
-      if (!BarcodeDetectorAPI) return;
+      if (!BarcodeDetectorAPI) {
+        toast.error(
+          "Barcode scanning is not supported in this browser. Try Chrome on Android.",
+        );
+        return;
+      }
       const detector = new BarcodeDetectorAPI({
         formats: [
           "ean_13",
@@ -141,8 +146,16 @@ export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
   };
 
   const openScanner = async () => {
+    console.debug("[scan][add-udhaar] scan button clicked");
     setMode("scanner");
-    await startCamera();
+    const started = await startCamera();
+    console.debug("[scan][add-udhaar] startCamera result", { started });
+    if (!started) {
+      toast.error(
+        "Could not start camera. Use HTTPS (or localhost) and allow camera permission.",
+      );
+      setMode("form");
+    }
   };
 
   const closeScanner = () => {

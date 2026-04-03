@@ -32,7 +32,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Screen } from "../App";
-import type { CustomerBalance } from "../backend.d";
+import type { CustomerBalance } from "../backendTypes";
 import { useCustomerPhoto } from "../hooks/useCustomerPhoto";
 import { useCustomerBalance, useDeleteCustomer } from "../hooks/useQueries";
 import {

@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { useState } from "react";
-import type { CustomerBalance } from "./backend.d";
+import type { CustomerBalance } from "./backendTypes";
 import { BatchUdhaarScreen } from "./components/BatchUdhaarScreen";
 import { CustomerProfile } from "./components/CustomerProfile";
 import { CustomersScreen } from "./components/CustomersScreen";

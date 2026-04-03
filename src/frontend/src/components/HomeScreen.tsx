@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Menu, ScanLine, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Screen } from "../App";
-import type { CustomerBalance } from "../backend.d";
+import type { CustomerBalance } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
 import { useCustomerPhoto } from "../hooks/useCustomerPhoto";
 import { useAllCustomers } from "../hooks/useQueries";
@@ -26,7 +26,14 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
   const { data: customers, isLoading } = useAllCustomers();
   const settings = getSettings();
 
-  const { isActive, startCamera, stopCamera, videoRef } = useCamera({
+  const {
+    isActive,
+    startCamera,
+    stopCamera,
+    videoRef,
+    error: camError,
+    isSupported,
+  } = useCamera({
     facingMode: "environment",
     width: 640,
     height: 480,
@@ -57,15 +64,27 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
   }, [stopCamera]);
 
   const openScanner = async () => {
+    console.debug("[scan][home] scan button clicked");
     setScannerOpen(true);
-    await startCamera();
+    const started = await startCamera();
+    console.debug("[scan][home] startCamera result", { started });
+    if (!started) {
+      toast.error(
+        "Could not start camera. Use HTTPS (or localhost) and allow camera permission.",
+      );
+    }
   };
 
   // Customer barcode scan loop
   useEffect(() => {
     if (scannerOpen && isActive) {
       const BarcodeDetectorAPI = (window as any).BarcodeDetector;
-      if (!BarcodeDetectorAPI) return;
+      if (!BarcodeDetectorAPI) {
+        toast.error(
+          "Barcode scanning is not supported in this browser. Try Chrome on Android.",
+        );
+        return;
+      }
       const detector = new BarcodeDetectorAPI({
         formats: ["code_128", "code_39", "ean_13", "qr_code"],
       });
@@ -233,7 +252,13 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
               />
             </div>
           </div>
-          <div className="px-4 py-6 text-center">
+          <div className="px-4 py-6 text-center space-y-3">
+            {(camError || isSupported === false) && (
+              <div className="rounded-lg bg-red-500/20 border border-red-400/40 p-3 text-red-100 text-sm">
+                {camError?.message ||
+                  "Camera is unavailable. Use HTTPS (or localhost) and allow permission."}
+              </div>
+            )}
             <p className="text-white/60 text-sm">
               Point camera at customer barcode
             </p>
