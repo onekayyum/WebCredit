@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* Off-white content background */
+    --background: 0.97 0.005 240;
+    --foreground: 0.16 0.025 240;
+    --card: 1 0 0;
+    --card-foreground: 0.16 0.025 240;
+    --popover: 1 0 0;
+    --popover-foreground: 0.16 0.025 240;
+    /* Teal-green primary */
+    --primary: 0.52 0.085 175;
+    --primary-foreground: 1 0 0;
+    /* Deep slate secondary */
+    --secondary: 0.23 0.025 230;
+    --secondary-foreground: 0.97 0.005 240;
+    --muted: 0.94 0.008 230;
+    --muted-foreground: 0.5 0.02 230;
+    --accent: 0.94 0.008 230;
+    --accent-foreground: 0.23 0.025 230;
+    /* Red-orange destructive */
+    --destructive: 0.55 0.175 25;
+    --destructive-foreground: 1 0 0;
+    --border: 0.9 0.008 230;
+    --input: 0.9 0.008 230;
+    --ring: 0.52 0.085 175;
+    --chart-1: 0.52 0.085 175;
+    --chart-2: 0.55 0.175 25;
+    --chart-3: 0.72 0.15 65;
+    --chart-4: 0.23 0.025 230;
+    --chart-5: 0.65 0.1 150;
+    --sidebar: 0.22 0.03 230;
+    --sidebar-foreground: 0.97 0.005 240;
+    --sidebar-primary: 0.52 0.085 175;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.18 0.025 230;
+    --sidebar-accent-foreground: 0.97 0.005 240;
+    --sidebar-border: 0.28 0.03 230;
+    --sidebar-ring: 0.52 0.085 175;
+    /* Custom tokens */
+    --navy-header: oklch(0.16 0.025 240);
+    --navy-dark: oklch(0.22 0.03 230);
+    --teal: oklch(0.52 0.085 175);
+    --teal-light: oklch(0.62 0.075 175);
+    --slate-dark: oklch(0.23 0.025 230);
+    --warning-amber: oklch(0.72 0.15 65);
+    --danger-red: oklch(0.55 0.175 25);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Mobile viewport fix */
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .app-header {
+    background: linear-gradient(
+      135deg,
+      var(--navy-header) 0%,
+      var(--navy-dark) 100%
+    );
+  }
+  .teal-btn {
+    background-color: var(--teal);
+    color: white;
+  }
+  .teal-btn:hover {
+    background-color: var(--teal-light);
+  }
+  .stat-card {
+    @apply bg-card rounded-xl p-3 flex flex-col gap-1 shadow-sm;
+  }
+  .action-btn {
+    @apply flex flex-col items-center justify-center gap-2 rounded-xl p-4 min-h-[80px] text-sm font-semibold;
+  }
+  .customer-row {
+    @apply flex items-center gap-3 bg-card rounded-xl p-4 shadow-sm active:scale-[0.98] transition-transform cursor-pointer;
+  }
+  .screen-container {
+    @apply flex flex-col h-full overflow-hidden;
+  }
+  .scroll-area {
+    @apply flex-1 overflow-y-auto;
+  }
+  /* Scrollbar styling */
+  .scroll-area::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-area::-webkit-scrollbar-thumb {
+    background: oklch(var(--muted-foreground) / 0.3);
+    border-radius: 2px;
+  }
+}
