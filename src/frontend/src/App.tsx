@@ -11,6 +11,7 @@ import { SettingsScreen } from "./components/SettingsScreen";
 import { Sidebar } from "./components/Sidebar";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { LoginScreen } from "./components/LoginScreen";
+import { OnboardingScreen } from "./components/OnboardingScreen";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
 export type Screen =
@@ -33,6 +34,9 @@ export type NavTab =
 
 export default function App() {
   const { token } = useInternetIdentity();
+  const [onboardingDone, setOnboardingDone] = useState(
+    localStorage.getItem("onboardingDone") === "true",
+  );
   const [screen, setScreen] = useState<Screen>({ id: "dashboard" });
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,6 +58,14 @@ export default function App() {
     return (
       <>
         <LoginScreen />
+        <Toaster position="bottom-center" />
+      </>
+    );
+  }
+  if (!onboardingDone) {
+    return (
+      <>
+        <OnboardingScreen onDone={() => setOnboardingDone(true)} />
         <Toaster position="bottom-center" />
       </>
     );

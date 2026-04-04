@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Clock, Menu, ScanLine, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../i18n";
 import { toast } from "sonner";
 import type { Screen } from "../App";
 import type { CustomerBalance } from "../backendTypes";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function HomeScreen({ navigate, onOpenSidebar }: Props) {
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const { data: customers, isLoading } = useAllCustomers();
@@ -129,7 +131,7 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
               <Menu size={20} />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Udhar</h1>
+              <h1 className="text-white text-xl font-bold">{t("credit")}</h1>
               <p className="text-white/60 text-xs mt-0.5">
                 {customers?.length || 0} customers · {formatCurrency(totalDue)}{" "}
                 due

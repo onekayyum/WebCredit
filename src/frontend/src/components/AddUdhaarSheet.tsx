@@ -26,7 +26,7 @@ interface Props {
 
 type Mode = "form" | "scanner";
 
-export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
+export function AddCreditSheet({ open, onOpenChange, customerId }: Props) {
   const [mode, setMode] = useState<Mode>("form");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [productName, setProductName] = useState("");
@@ -179,10 +179,10 @@ export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
       txType: "udhaar",
     });
     if (result) {
-      toast.success(`Udhaar added: ₹${total}`);
+      toast.success(`Credit added: ₹${total}`);
       onOpenChange(false);
     } else {
-      toast.error("Failed to add udhaar");
+      toast.error("Failed to add credit");
     }
   };
 
@@ -195,7 +195,7 @@ export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
         data-ocid="add_udhaar.sheet"
       >
         <SheetHeader className="px-5 mb-4">
-          <SheetTitle>Add Udhaar</SheetTitle>
+          <SheetTitle>Add Credit</SheetTitle>
         </SheetHeader>
 
         {mode === "scanner" ? (
@@ -397,7 +397,7 @@ export function AddUdhaarSheet({ open, onOpenChange, customerId }: Props) {
               {addTransaction.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {addTransaction.isPending ? "Adding…" : "Confirm Udhaar"}
+              {addTransaction.isPending ? "Adding…" : "Confirm Credit"}
             </Button>
           </div>
         )}

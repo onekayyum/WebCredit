@@ -30,6 +30,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../i18n";
 import { toast } from "sonner";
 import type { Screen } from "../App";
 import type { Product } from "../backendTypes";
@@ -49,6 +50,7 @@ interface Props {
 }
 
 export function ProductsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [importProgress, setImportProgress] = useState<{
     loaded: number;
@@ -118,7 +120,7 @@ export function ProductsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-white text-xl font-bold">Products</h1>
+            <h1 className="text-white text-xl font-bold">{t("products")}</h1>
           </div>
           <div className="flex gap-2">
             <button

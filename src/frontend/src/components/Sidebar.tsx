@@ -10,6 +10,7 @@ import {
 import type { NavTab, Screen } from "../App";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { clearUserData } from "../utils/userIndexedDb";
+import { useI18n } from "../i18n";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ const NAV_ITEMS: {
     screen: { id: "dashboard" },
   },
   {
-    label: "Udhar",
+    label: "Credit",
     tab: "udhar",
     icon: <Users size={20} />,
     screen: { id: "udhar" },
@@ -63,6 +64,7 @@ export function Sidebar({
   activeTab,
 }: SidebarProps) {
   const { clear, identity } = useInternetIdentity();
+  const { t } = useI18n();
   const handleNav = (screen: Screen) => {
     navigate(screen);
     onClose();
@@ -96,9 +98,9 @@ export function Sidebar({
         <div className="app-header px-5 pt-12 pb-5 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-white text-lg font-bold tracking-tight">
-              Credit Shop
+              {t("app_name")}
             </h2>
-            <p className="text-white/50 text-xs mt-0.5">Shop management</p>
+            <p className="text-white/50 text-xs mt-0.5">Ledger management</p>
           </div>
           <button
             type="button"
@@ -126,7 +128,15 @@ export function Sidebar({
               }`}
             >
               {item.icon}
-              {item.label}
+              {item.label === "Dashboard"
+                ? t("dashboard")
+                : item.label === "Credit"
+                  ? t("credit")
+                  : item.label === "Products"
+                    ? t("products")
+                    : item.label === "Customers"
+                      ? t("customers")
+                      : t("settings")}
             </button>
           ))}
         </nav>
@@ -144,18 +154,10 @@ export function Sidebar({
             }}
           >
             <LogOut size={16} />
-            Logout
+            {t("logout")}
           </button>
           <p className="text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()}{" "}
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground"
-            >
-              caffeine.ai
-            </a>
+            © {new Date().getFullYear()} {t("app_name")}
           </p>
         </div>
       </div>

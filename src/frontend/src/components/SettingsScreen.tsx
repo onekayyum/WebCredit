@@ -9,30 +9,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Bell, DollarSign, Info, Menu, Shield } from "lucide-react";
+import { Bell, DollarSign, Globe, Info, Menu, Shield } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import { toast } from "sonner";
 import type { Screen } from "../App";
+import { CURRENCY_OPTIONS, detectCurrencyFromLocaleCode } from "../utils/format";
 
-const CURRENCIES = [
-  { value: "₹", label: "₹ Indian Rupee" },
-  { value: "$", label: "$ US Dollar" },
-  { value: "AED", label: "AED UAE Dirham" },
-  { value: "SAR", label: "SAR Saudi Riyal" },
-  { value: "£", label: "£ British Pound" },
-  { value: "₨", label: "₨ Pakistani Rupee" },
+const LANGS = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "हिन्दी" },
+  { value: "ur", label: "اردو" },
+  { value: "ar", label: "العربية" },
 ];
-
-function detectDefaultCurrency(): string {
-  const lang = navigator.language || "";
-  if (lang.includes("-IN") || lang === "hi" || lang === "ur") return "₹";
-  if (lang.includes("-PK")) return "₨";
-  if (lang.includes("-AE")) return "AED";
-  if (lang.includes("-SA")) return "SAR";
-  if (lang.includes("-GB")) return "£";
-  if (lang.includes("-US")) return "$";
-  return "₹";
-}
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -40,6 +29,7 @@ interface Props {
 }
 
 export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
+  const { t, setLang } = useI18n();
   const [threshold, setThreshold] = useState(
     localStorage.getItem("threshold") || "1000",
   );
@@ -50,13 +40,14 @@ export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
     localStorage.getItem("reminderEnabled") === "true",
   );
   const [currency, setCurrency] = useState(
-    localStorage.getItem("currencyOverride") || detectDefaultCurrency(),
+    localStorage.getItem("currencyCode") || detectCurrencyFromLocaleCode(),
   );
+  const [language, setLanguage] = useState(localStorage.getItem("language") || "en");
 
   const handleSave = () => {
-    const t = Number.parseFloat(threshold);
+    const tValue = Number.parseFloat(threshold);
     const d = Number.parseInt(inactiveDays);
-    if (Number.isNaN(t) || t < 0) {
+    if (Number.isNaN(tValue) || tValue < 0) {
       toast.error("Enter valid threshold");
       return;
     }
@@ -64,16 +55,17 @@ export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
       toast.error("Enter valid days");
       return;
     }
-    localStorage.setItem("threshold", t.toString());
+    localStorage.setItem("threshold", tValue.toString());
     localStorage.setItem("inactiveDays", d.toString());
     localStorage.setItem("reminderEnabled", reminderEnabled.toString());
-    localStorage.setItem("currencyOverride", currency);
-    toast.success("Settings saved");
+    localStorage.setItem("currencyCode", currency);
+    localStorage.setItem("language", language);
+    setLang(language as "en" | "hi" | "ur" | "ar");
+    toast.success(t("settings_saved"));
   };
 
   return (
     <div className="screen-container">
-      {/* Header */}
       <div className="app-header px-4 pt-12 pb-6">
         <div className="flex items-center gap-3 mb-1">
           <button
@@ -86,14 +78,34 @@ export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
             <Menu size={20} />
           </button>
           <div>
-            <h1 className="text-white text-xl font-bold">Settings</h1>
-            <p className="text-white/60 text-sm">Configure app behaviour</p>
+            <h1 className="text-white text-xl font-bold">{t("settings")}</h1>
+            <p className="text-white/60 text-sm">Configure Ledger behavior</p>
           </div>
         </div>
       </div>
 
       <div className="scroll-area px-4 py-5 space-y-5 pb-8">
-        {/* Status thresholds */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Globe size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("language")}
+            </h2>
+          </div>
+          <div className="bg-card rounded-xl p-4">
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGS.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Shield size={16} className="text-muted-foreground" />
@@ -104,140 +116,62 @@ export function SettingsScreen({ navigate: _navigate, onOpenSidebar }: Props) {
           <div className="bg-card rounded-xl p-4 space-y-4">
             <div>
               <Label htmlFor="threshold">High Balance Threshold</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Show "High" badge when balance exceeds this amount
-              </p>
-              <Input
-                id="threshold"
-                data-ocid="settings.threshold.input"
-                value={threshold}
-                onChange={(e) => setThreshold(e.target.value)}
-                type="number"
-                min="0"
-                className="h-12"
-              />
+              <Input id="threshold" value={threshold} onChange={(e) => setThreshold(e.target.value)} type="number" min="0" className="h-12 mt-1" />
             </div>
             <div>
               <Label htmlFor="inactive-days">Inactive Days Threshold</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Show "Inactive" badge if no payment in this many days
-              </p>
-              <Input
-                id="inactive-days"
-                data-ocid="settings.inactive_days.input"
-                value={inactiveDays}
-                onChange={(e) => setInactiveDays(e.target.value)}
-                type="number"
-                min="1"
-                className="h-12"
-              />
+              <Input id="inactive-days" value={inactiveDays} onChange={(e) => setInactiveDays(e.target.value)} type="number" min="1" className="h-12 mt-1" />
             </div>
           </div>
         </section>
 
-        {/* Currency */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <DollarSign size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Currency
-            </h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("currency")}</h2>
           </div>
           <div className="bg-card rounded-xl p-4">
-            <Label htmlFor="currency-select">Currency Symbol</Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              Used for all prices, totals, and transactions
-            </p>
             <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger
-                id="currency-select"
-                data-ocid="settings.currency.select"
-                className="h-12"
-              >
+              <SelectTrigger className="h-12">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
+                {CURRENCY_OPTIONS.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </section>
 
-        {/* Reminders */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Bell size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Reminders
-            </h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Reminders</h2>
           </div>
           <div className="bg-card rounded-xl p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Show Reminder Suggestions</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Suggest reminders for inactive customers (no auto-send)
-                </p>
-              </div>
-              <Switch
-                data-ocid="settings.reminder.switch"
-                checked={reminderEnabled}
-                onCheckedChange={setReminderEnabled}
-              />
+              <p className="text-sm font-medium">Show reminder suggestions</p>
+              <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} />
             </div>
           </div>
         </section>
 
-        {/* Save */}
-        <Button
-          type="button"
-          data-ocid="settings.save.primary_button"
-          className="w-full h-12 font-semibold"
-          onClick={handleSave}
-        >
-          Save Settings
-        </Button>
+        <Button className="w-full h-12 font-semibold" onClick={handleSave}>{t("save_settings")}</Button>
 
-        {/* App info */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Info size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              App Info
-            </h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">App Info</h2>
           </div>
           <div className="bg-card rounded-xl p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Version</span>
-              <span className="font-medium">2.0.0</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Platform</span>
-              <span className="font-medium">Node.js + SQLite</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Storage</span>
-              <span className="font-medium">On-chain (ICP)</span>
-            </div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Version</span><span className="font-medium">2.0.0</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Platform</span><span className="font-medium">Node.js + SQLite</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Storage</span><span className="font-medium">Local Database</span></div>
           </div>
         </section>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground pb-2">
-          © {new Date().getFullYear()}.{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-foreground"
-          >
-            Built with ❤️ using caffeine.ai
-          </a>
-        </p>
+        <p className="text-center text-xs text-muted-foreground pb-2">© {new Date().getFullYear()} {t("app_name")}</p>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useMemo } from "react";
+import { useI18n } from "../i18n";
 import type { Screen } from "../App";
 import { useAllCustomers } from "../hooks/useQueries";
 import { formatCurrency, getSettings } from "../utils/format";
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function DashboardScreen({ navigate, onOpenSidebar }: Props) {
+  const { t } = useI18n();
   const { data: customers, isLoading } = useAllCustomers();
   const settings = getSettings();
 
@@ -58,8 +60,8 @@ export function DashboardScreen({ navigate, onOpenSidebar }: Props) {
               <Menu size={20} />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Dashboard</h1>
-              <p className="text-white/60 text-xs mt-0.5">Business overview</p>
+              <h1 className="text-white text-xl font-bold">{t("dashboard")}</h1>
+              <p className="text-white/60 text-xs mt-0.5">{t("business_overview")}</p>
             </div>
           </div>
         </div>
@@ -86,7 +88,7 @@ export function DashboardScreen({ navigate, onOpenSidebar }: Props) {
               />
               <StatCard
                 icon={<ArrowUpCircle size={22} className="text-white" />}
-                label="Total Udhaar Given"
+                label="Total Credit Given"
                 value={formatCurrency(stats?.totalUdhaar ?? 0)}
                 sub="All time"
                 color="bg-amber-500"
@@ -157,7 +159,7 @@ export function DashboardScreen({ navigate, onOpenSidebar }: Props) {
                 >
                   <Users size={20} className="text-primary" />
                   <span className="text-xs font-medium text-foreground">
-                    Customers / Udhar
+                    Customers / Credit
                   </span>
                 </button>
                 <button

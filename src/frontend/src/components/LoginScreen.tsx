@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export function LoginScreen() {
+  const { t } = useI18n();
   const { login, signup, isLoggingIn, loginError } = useInternetIdentity();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,9 +35,9 @@ export function LoginScreen() {
   return (
     <div className="h-full flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 space-y-4">
-        <h1 className="text-xl font-semibold">Credit Shop</h1>
+        <h1 className="text-xl font-semibold">{t("app_name")}</h1>
         <p className="text-sm text-muted-foreground">
-          {mode === "login" ? "Login to continue" : "Create your account"}
+          {mode === "login" ? `${t("login")} to continue` : "Create your account"}
         </p>
         <Input
           value={username}
@@ -55,7 +57,7 @@ export function LoginScreen() {
           }}
         />
         <Button className="w-full" onClick={() => void handleSubmit()} disabled={isLoggingIn}>
-          {isLoggingIn ? "Please wait..." : mode === "login" ? "Login" : "Sign up"}
+          {isLoggingIn ? "Please wait..." : mode === "login" ? t("login") : t("signup")}
         </Button>
         <Button
           variant="ghost"

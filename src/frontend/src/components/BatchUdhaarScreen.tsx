@@ -66,26 +66,23 @@ function buildWhatsAppMessage(
   items: SessionItem[],
   total: number,
   remainingBalance: number,
-  currencySymbol: string,
 ): string {
-  const date = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const date = new Date().toISOString().slice(0, 10);
   const lines = [
-    "*Udhaar Receipt*",
-    `Customer: ${customerName}`,
-    `Date: ${date}`,
+    "Ledger Receipt",
     "",
-    "*Items:*",
+    `Customer: ${customerName}`,
+    "",
+    "Items:",
     ...items.map(
-      (i) =>
-        `• ${i.name} × ${i.qty} = ${currencySymbol}${(i.price * i.qty).toFixed(2)}`,
+      (i) => `- ${i.name} x${i.qty} = ${formatCurrency(i.price * i.qty)}`,
     ),
     "",
-    `*Total Added: ${currencySymbol}${total.toFixed(2)}*`,
-    `Remaining Balance: ${currencySymbol}${remainingBalance.toFixed(2)}`,
+    `Total: ${formatCurrency(total)}`,
+    `Balance: ${formatCurrency(remainingBalance)}`,
+    `Date: ${date}`,
+    "",
+    "Thank you!",
   ];
   return lines.join("\n");
 }
@@ -140,10 +137,6 @@ export function BatchUdhaarScreen({
   const addBatchTx = useAddBatchTransaction();
   const addProductMutation = useAddProduct();
   const { data: balanceSummary } = useCustomerBalance(customerId);
-
-  const currencySymbol =
-    localStorage.getItem("currencySymbol") ||
-    (navigator.language.startsWith("ar") ? "د.إ" : "₹");
 
   const {
     isActive,
@@ -376,7 +369,7 @@ export function BatchUdhaarScreen({
     });
     if (result) {
       clearSession(customerId);
-      toast.success(`Udhaar saved — ${formatCurrency(snapshotTotal)}`);
+      toast.success(`Credit saved — ${formatCurrency(snapshotTotal)}`);
       // Show WhatsApp prompt
       setWhatsappPrompt({
         show: true,
@@ -384,7 +377,7 @@ export function BatchUdhaarScreen({
         savedTotal: snapshotTotal,
       });
     } else {
-      toast.error("Failed to save udhaar");
+      toast.error("Failed to save credit");
     }
   };
 
@@ -408,7 +401,6 @@ export function BatchUdhaarScreen({
       whatsappPrompt.savedItems,
       whatsappPrompt.savedTotal,
       balance,
-      currencySymbol,
     );
     openWhatsApp(mobile, message);
     setWhatsappPrompt(null);
@@ -452,7 +444,7 @@ export function BatchUdhaarScreen({
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-white font-bold text-base leading-tight truncate">
-              Batch Udhaar
+              Batch Credit
             </h1>
             <p className="text-white/60 text-xs truncate">{customerName}</p>
           </div>
