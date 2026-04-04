@@ -20,6 +20,7 @@ const MAX_NAME_LENGTH = 200;
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
+db.pragma("synchronous = NORMAL");
 db.pragma("foreign_keys = ON");
 
 const FRONTEND_DIST = path.join(process.cwd(), "src", "frontend", "dist");
@@ -30,7 +31,7 @@ const nowNs = () => (BigInt(Date.now()) * 1000000n).toString();
 
 const upload = multer({
   dest: path.join(process.cwd(), "tmp", "uploads"),
-  limits: { fileSize: 30 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 function createToken(user) {
@@ -141,6 +142,14 @@ function initializeSchema() {
     user_id INTEGER,
     FOREIGN KEY(customerId) REFERENCES customers(id)
   );
+  CREATE TABLE IF NOT EXISTS imports (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    total_rows INTEGER NOT NULL DEFAULT 0,
+    processed_rows INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
   `);
 
   addUserIdColumnIfMissing("customers");
@@ -180,6 +189,8 @@ function initializeSchema() {
   db.exec("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_user_barcode ON products(user_id, barcode)");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_user_mobile ON customers(user_id, mobile)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_imports_user_status ON imports(user_id, status)");
 }
 
 initializeSchema();
@@ -326,6 +337,9 @@ app.post("/products/import", importRateLimiter, authMiddleware, upload.single("f
 
   const filePath = req.file.path;
   const userId = req.user.id;
+  const importId = Number(db.prepare("SELECT COALESCE(MAX(id), 0) + 1 AS id FROM imports").get().id);
+  db.prepare("INSERT INTO imports (id, user_id, status, total_rows, processed_rows, created_at) VALUES (?, ?, 'processing', 0, 0, ?)")
+    .run(importId, userId, nowNs());
 
   const insertOrUpdateMany = db.transaction((rows) => {
     const upsert = db.prepare(`
@@ -360,6 +374,8 @@ app.post("/products/import", importRateLimiter, authMiddleware, upload.single("f
       if (row.__updated) updated += 1;
       else imported += 1;
     }
+    db.prepare("UPDATE imports SET processed_rows = ?, total_rows = ? WHERE id = ?")
+      .run(imported + updated + skipped, totalRows, importId);
     currentBatch = [];
   };
 
@@ -385,15 +401,21 @@ app.post("/products/import", importRateLimiter, authMiddleware, upload.single("f
     try {
       flush();
       fs.unlink(filePath, () => {});
+      db.prepare("UPDATE imports SET status = 'completed', total_rows = ?, processed_rows = ? WHERE id = ?")
+        .run(totalRows, imported + updated + skipped, importId);
       return res.json({ totalRows, imported, updated, skipped });
     } catch (error) {
       fs.unlink(filePath, () => {});
+      db.prepare("UPDATE imports SET status = 'failed', total_rows = ?, processed_rows = ? WHERE id = ?")
+        .run(totalRows, imported + updated + skipped, importId);
       return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
   parser.on("error", (error) => {
     fs.unlink(filePath, () => {});
+    db.prepare("UPDATE imports SET status = 'failed', total_rows = ?, processed_rows = ? WHERE id = ?")
+      .run(totalRows, imported + updated + skipped, importId);
     return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
   });
 });
@@ -556,6 +578,17 @@ if (HAS_FRONTEND_DIST) {
     return res.sendFile(path.join(FRONTEND_DIST, "index.html"));
   });
 }
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  if (error?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "File too large. Maximum CSV size is 10MB." });
+  }
+  if (res.headersSent) {
+    return undefined;
+  }
+  return res.status(500).json({ error: "Internal server error" });
+});
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
