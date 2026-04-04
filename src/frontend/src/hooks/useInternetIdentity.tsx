@@ -8,13 +8,19 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AUTH_EVENT, clearAuthSession, getAuthUser, getToken, setAuthSession } from "../utils/auth";
+import {
+  AUTH_EVENT,
+  clearAuthSession,
+  getAuthUser,
+  getToken,
+  setAuthSession,
+} from "../utils/auth";
 
 const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "";
 
 export type Status = "idle" | "loading" | "success" | "error";
 
-export type InternetIdentityContext = {
+export type AuthContext = {
   identity?: { id: string; username: string };
   login: (username: string, password: string) => Promise<boolean>;
   signup: (username: string, password: string) => Promise<boolean>;
@@ -29,33 +35,39 @@ export type InternetIdentityContext = {
   token?: string;
 };
 
-const InternetIdentityReactContext = createContext<
-  InternetIdentityContext | undefined
->(undefined);
+/** @deprecated Use AuthContext instead */
+export type InternetIdentityContext = AuthContext;
+
+const AuthReactContext = createContext<AuthContext | undefined>(undefined);
 
 function assertProviderPresent(
-  context: InternetIdentityContext | undefined,
-): asserts context is InternetIdentityContext {
+  context: AuthContext | undefined,
+): asserts context is AuthContext {
   if (!context) {
     throw new Error(
-      "InternetIdentityProvider is not present. Wrap your component tree with it.",
+      "AuthProvider is not present. Wrap your component tree with it.",
     );
   }
 }
 
-export const useInternetIdentity = (): InternetIdentityContext => {
-  const context = useContext(InternetIdentityReactContext);
+export const useAuth = (): AuthContext => {
+  const context = useContext(AuthReactContext);
   assertProviderPresent(context);
   return context;
 };
 
-export function InternetIdentityProvider({
+/** @deprecated Use useAuth instead */
+export const useInternetIdentity = useAuth;
+
+export function AuthProvider({
   children,
 }: PropsWithChildren<{ children: ReactNode }>) {
-  const [identity, setIdentity] = useState<
-    InternetIdentityContext["identity"]
-  >(getAuthUser() ?? undefined);
-  const [token, setToken] = useState<string | undefined>(getToken() ?? undefined);
+  const [identity, setIdentity] = useState<AuthContext["identity"]>(
+    getAuthUser() ?? undefined,
+  );
+  const [token, setToken] = useState<string | undefined>(
+    getToken() ?? undefined,
+  );
   const [loginStatus, setLoginStatus] = useState<Status>("idle");
   const [loginError, setLoginError] = useState<Error | undefined>(undefined);
 
@@ -68,34 +80,51 @@ export function InternetIdentityProvider({
     return () => window.removeEventListener(AUTH_EVENT, onAuthChanged);
   }, []);
 
-  const authenticate = useCallback(async (path: "/auth/login" | "/auth/signup", username: string, password: string) => {
-    setLoginStatus("loading");
-    setLoginError(undefined);
-    try {
-      const response = await fetch(`${API_BASE}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
-      });
+  const authenticate = useCallback(
+    async (
+      path: "/auth/login" | "/auth/signup",
+      username: string,
+      password: string,
+    ) => {
+      setLoginStatus("loading");
+      setLoginError(undefined);
+      try {
+        const response = await fetch(`${API_BASE}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username.trim(), password }),
+        });
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || `Request failed: ${response.status}`);
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setAuthSession(data.token, data.user);
+        setLoginStatus("success");
+        return true;
+      } catch (error) {
+        setLoginStatus("error");
+        setLoginError(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        return false;
       }
+    },
+    [],
+  );
 
-      const data = await response.json();
-      setAuthSession(data.token, data.user);
-      setLoginStatus("success");
-      return true;
-    } catch (error) {
-      setLoginStatus("error");
-      setLoginError(error instanceof Error ? error : new Error(String(error)));
-      return false;
-    }
-  }, []);
-
-  const login = useCallback((username: string, password: string) => authenticate("/auth/login", username, password), [authenticate]);
-  const signup = useCallback((username: string, password: string) => authenticate("/auth/signup", username, password), [authenticate]);
+  const login = useCallback(
+    (username: string, password: string) =>
+      authenticate("/auth/login", username, password),
+    [authenticate],
+  );
+  const signup = useCallback(
+    (username: string, password: string) =>
+      authenticate("/auth/signup", username, password),
+    [authenticate],
+  );
 
   const clear = useCallback(() => {
     clearAuthSession();
@@ -103,7 +132,7 @@ export function InternetIdentityProvider({
     setLoginError(undefined);
   }, []);
 
-  const value = useMemo<InternetIdentityContext>(
+  const value = useMemo<AuthContext>(
     () => ({
       identity,
       login,
@@ -122,8 +151,11 @@ export function InternetIdentityProvider({
   );
 
   return (
-    <InternetIdentityReactContext.Provider value={value}>
+    <AuthReactContext.Provider value={value}>
       {children}
-    </InternetIdentityReactContext.Provider>
+    </AuthReactContext.Provider>
   );
 }
+
+/** @deprecated Use AuthProvider instead */
+export const InternetIdentityProvider = AuthProvider;

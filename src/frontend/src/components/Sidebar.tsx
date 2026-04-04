@@ -8,9 +8,9 @@ import {
   X,
 } from "lucide-react";
 import type { NavTab, Screen } from "../App";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { clearUserData } from "../utils/userIndexedDb";
+import { useAuth } from "../hooks/useInternetIdentity";
 import { useI18n } from "../i18n";
+import { clearUserData } from "../utils/userIndexedDb";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ export function Sidebar({
   navigate,
   activeTab,
 }: SidebarProps) {
-  const { clear, identity } = useInternetIdentity();
+  const { clear, identity } = useAuth();
   const { t } = useI18n();
   const handleNav = (screen: Screen) => {
     navigate(screen);

@@ -1,6 +1,11 @@
 const DB_NAME = "creditshop_local";
 const DB_VERSION = 1;
-const STORES = ["products", "customers", "transactions", "transaction_items"] as const;
+const STORES = [
+  "products",
+  "customers",
+  "transactions",
+  "transaction_items",
+] as const;
 
 type StoreName = (typeof STORES)[number];
 
@@ -40,6 +45,31 @@ export async function putManyByUser(
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+}
+
+/**
+ * Read all rows for a given user from a local IndexedDB store.
+ * Used as an offline fallback when the backend is unreachable.
+ */
+export async function getAllByUser<T = Record<string, unknown>>(
+  storeName: StoreName,
+  userId: string,
+): Promise<T[]> {
+  const db = await openDb();
+  return new Promise<T[]>((resolve, reject) => {
+    const tx = db.transaction(storeName, "readonly");
+    const store = tx.objectStore(storeName);
+    const index = store.index("user_id");
+    const req = index.getAll(IDBKeyRange.only(userId));
+    req.onsuccess = () => {
+      db.close();
+      resolve(req.result as T[]);
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+  });
 }
 
 export async function clearUserData(userId: string): Promise<void> {

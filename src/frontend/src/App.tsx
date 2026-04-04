@@ -6,13 +6,13 @@ import { CustomerProfile } from "./components/CustomerProfile";
 import { CustomersScreen } from "./components/CustomersScreen";
 import { DashboardScreen } from "./components/DashboardScreen";
 import { HomeScreen } from "./components/HomeScreen";
+import { LoginScreen } from "./components/LoginScreen";
+import { OnboardingScreen } from "./components/OnboardingScreen";
 import { ProductsScreen } from "./components/ProductsScreen";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { Sidebar } from "./components/Sidebar";
 import { TransactionHistory } from "./components/TransactionHistory";
-import { LoginScreen } from "./components/LoginScreen";
-import { OnboardingScreen } from "./components/OnboardingScreen";
-import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { useAuth } from "./hooks/useInternetIdentity";
 
 export type Screen =
   | { id: "dashboard" }
@@ -33,7 +33,7 @@ export type NavTab =
   | "settings";
 
 export default function App() {
-  const { token } = useInternetIdentity();
+  const { token } = useAuth();
   const [onboardingDone, setOnboardingDone] = useState(
     localStorage.getItem("onboardingDone") === "true",
   );
