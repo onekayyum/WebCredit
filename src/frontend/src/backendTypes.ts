@@ -53,6 +53,16 @@ export interface BackendInterface {
     txType: string,
   ): Promise<Transaction | null>;
   bulkImportProducts(productList: Array<Product>): Promise<[bigint, bigint]>;
+  importProductsCsv(
+    file: File,
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<{
+    totalRows: number;
+    imported: number;
+    updated: number;
+    skipped: number;
+  }>;
+  exportProductsCsv(): Promise<void>;
   deleteCustomer(id: bigint): Promise<boolean>;
   deleteProduct(id: bigint): Promise<boolean>;
   deleteTransaction(id: bigint): Promise<boolean>;

@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Clock, Menu, ScanLine, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../i18n";
 import { toast } from "sonner";
 import type { Screen } from "../App";
 import type { CustomerBalance } from "../backendTypes";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function HomeScreen({ navigate, onOpenSidebar }: Props) {
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const { data: customers, isLoading } = useAllCustomers();
@@ -33,6 +35,7 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
   });
 
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     if (!customers) return [];
@@ -108,6 +111,10 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
   return (
     <div className="screen-container">
       {/* Header */}
@@ -124,7 +131,7 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
               <Menu size={20} />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Udhar</h1>
+              <h1 className="text-white text-xl font-bold">{t("credit")}</h1>
               <p className="text-white/60 text-xs mt-0.5">
                 {customers?.length || 0} customers · {formatCurrency(totalDue)}{" "}
                 due
@@ -142,9 +149,15 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
               size={16}
             />
             <Input
+              ref={searchInputRef}
               data-ocid="home.search_input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && filtered[0]) {
+                  navigate({ id: "customerProfile", customer: filtered[0] });
+                }
+              }}
               placeholder="Search by name or mobile…"
               className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 h-10 text-sm"
             />

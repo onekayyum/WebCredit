@@ -1,12 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CustomerBalance, Product, Transaction } from "../backendTypes";
 import { useActor } from "./useActor";
+import { getAuthUser } from "../utils/auth";
+import { putManyByUser } from "../utils/userIndexedDb";
 
 export function useAllCustomers() {
   const { actor, isFetching } = useActor();
   return useQuery<CustomerBalance[]>({
     queryKey: ["customers"],
-    queryFn: () => actor!.getAllCustomers(),
+    queryFn: async () => {
+      const data = await actor!.getAllCustomers();
+      const user = getAuthUser();
+      if (user) {
+        await putManyByUser(
+          "customers",
+          user.id,
+          data.map((x) => ({
+            id: x.customer.id.toString(),
+            ...x,
+            customer: { ...x.customer, id: x.customer.id.toString() },
+          })),
+        );
+      }
+      return data;
+    },
     enabled: !!actor && !isFetching,
   });
 }
@@ -24,7 +41,18 @@ export function useTransactions(customerId: bigint) {
   const { actor, isFetching } = useActor();
   return useQuery<Transaction[]>({
     queryKey: ["transactions", customerId.toString()],
-    queryFn: () => actor!.getTransactionsForCustomer(customerId),
+    queryFn: async () => {
+      const data = await actor!.getTransactionsForCustomer(customerId);
+      const user = getAuthUser();
+      if (user) {
+        await putManyByUser(
+          "transactions",
+          user.id,
+          data.map((x) => ({ ...x, id: x.id.toString(), customerId: x.customerId.toString() })),
+        );
+      }
+      return data;
+    },
     enabled: !!actor && !isFetching,
   });
 }
@@ -33,7 +61,18 @@ export function useAllProducts() {
   const { actor, isFetching } = useActor();
   return useQuery<Product[]>({
     queryKey: ["products"],
-    queryFn: () => actor!.getAllProducts(),
+    queryFn: async () => {
+      const data = await actor!.getAllProducts();
+      const user = getAuthUser();
+      if (user) {
+        await putManyByUser(
+          "products",
+          user.id,
+          data.map((x) => ({ ...x, id: x.id.toString(), createdAt: x.createdAt.toString() })),
+        );
+      }
+      return data;
+    },
     enabled: !!actor && !isFetching,
   });
 }
@@ -178,5 +217,27 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: (id: bigint) => actor!.deleteProduct(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+  });
+}
+
+export function useImportProductsCsv() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: File;
+      onProgress?: (loaded: number, total: number) => void;
+    }) => actor!.importProductsCsv(file, onProgress),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+  });
+}
+
+export function useExportProductsCsv() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: () => actor!.exportProductsCsv(),
   });
 }
