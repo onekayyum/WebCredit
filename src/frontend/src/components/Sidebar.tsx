@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  LogOut,
   Package,
   Settings,
   UserCog,
@@ -7,6 +8,8 @@ import {
   X,
 } from "lucide-react";
 import type { NavTab, Screen } from "../App";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { clearUserData } from "../utils/userIndexedDb";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -59,6 +62,7 @@ export function Sidebar({
   navigate,
   activeTab,
 }: SidebarProps) {
+  const { clear, identity } = useInternetIdentity();
   const handleNav = (screen: Screen) => {
     navigate(screen);
     onClose();
@@ -129,6 +133,19 @@ export function Sidebar({
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border">
+          <button
+            type="button"
+            className="w-full mb-3 flex items-center justify-center gap-2 text-sm rounded-lg border border-border py-2 hover:bg-muted"
+            onClick={() => {
+              if (identity?.id) {
+                void clearUserData(identity.id);
+              }
+              clear();
+            }}
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
           <p className="text-xs text-muted-foreground text-center">
             © {new Date().getFullYear()}{" "}
             <a

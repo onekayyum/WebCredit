@@ -33,6 +33,7 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
   });
 
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     if (!customers) return [];
@@ -108,6 +109,10 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
   return (
     <div className="screen-container">
       {/* Header */}
@@ -142,9 +147,15 @@ export function HomeScreen({ navigate, onOpenSidebar }: Props) {
               size={16}
             />
             <Input
+              ref={searchInputRef}
               data-ocid="home.search_input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && filtered[0]) {
+                  navigate({ id: "customerProfile", customer: filtered[0] });
+                }
+              }}
               placeholder="Search by name or mobile…"
               className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 h-10 text-sm"
             />

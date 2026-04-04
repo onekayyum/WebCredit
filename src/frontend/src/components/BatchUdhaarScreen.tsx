@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Product } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
-import { useCSVProducts } from "../hooks/useCSVProducts";
 import {
   useAddBatchTransaction,
   useAddProduct,
@@ -59,20 +58,6 @@ function saveSession(customerId: bigint, items: SessionItem[]) {
 
 function clearSession(customerId: bigint) {
   localStorage.removeItem(`batchSession_${customerId.toString()}`);
-}
-
-function csvToProduct(csv: {
-  name: string;
-  price: number;
-  barcode: string;
-}): Product {
-  return {
-    id: 0n,
-    name: csv.name,
-    price: csv.price,
-    barcode: csv.barcode,
-    createdAt: 0n,
-  };
 }
 
 // WhatsApp receipt generator
@@ -152,7 +137,6 @@ export function BatchUdhaarScreen({
   );
 
   const { data: allProducts } = useAllProducts();
-  const { csvProducts } = useCSVProducts();
   const addBatchTx = useAddBatchTransaction();
   const addProductMutation = useAddProduct();
   const { data: balanceSummary } = useCustomerBalance(customerId);
@@ -240,11 +224,7 @@ export function BatchUdhaarScreen({
               return;
             }
 
-            const found =
-              allProducts?.find((p) => p.barcode === barcode) ??
-              (csvProducts.find((p) => p.barcode === barcode)
-                ? csvToProduct(csvProducts.find((p) => p.barcode === barcode)!)
-                : undefined);
+            const found = allProducts?.find((p) => p.barcode === barcode);
 
             if (found) {
               addOrIncrement(found);
@@ -278,7 +258,6 @@ export function BatchUdhaarScreen({
     isActive,
     videoRef,
     allProducts,
-    csvProducts,
     addOrIncrement,
     openAddManually,
   ]);
@@ -325,14 +304,8 @@ export function BatchUdhaarScreen({
       setManualBarcode("");
       return;
     }
-    const csvFound = csvProducts.find((p) => p.barcode === bc);
-    if (csvFound) {
-      addOrIncrement(csvToProduct(csvFound));
-      setManualBarcode("");
-    } else {
-      openAddManually(bc);
-      setManualBarcode("");
-    }
+    openAddManually(bc);
+    setManualBarcode("");
   };
 
   const handleSaveManually = async () => {
