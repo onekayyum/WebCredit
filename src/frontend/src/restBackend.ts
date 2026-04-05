@@ -1,3 +1,4 @@
+import { API_BASE } from "./apiConfig";
 import type {
   Customer,
   CustomerBalance,
@@ -6,8 +7,6 @@ import type {
   backendInterface,
 } from "./backendTypes";
 import { clearAuthSession, getToken } from "./utils/auth";
-
-const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "";
 
 function toBigInt(value: string | number | bigint): bigint {
   return typeof value === "bigint" ? value : BigInt(value);
@@ -120,12 +119,15 @@ export function createRestBackend(): backendInterface {
             return;
           }
           if (xhr.status < 200 || xhr.status >= 300) {
-            reject(new Error(xhr.responseText || `Import failed (${xhr.status})`));
+            reject(
+              new Error(xhr.responseText || `Import failed (${xhr.status})`),
+            );
             return;
           }
           resolve(JSON.parse(xhr.responseText));
         };
-        xhr.onerror = () => reject(new Error("Network error during CSV import"));
+        xhr.onerror = () =>
+          reject(new Error("Network error during CSV import"));
         xhr.send(formData);
       });
     },

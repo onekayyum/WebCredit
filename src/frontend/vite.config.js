@@ -28,4 +28,9 @@ export default defineConfig({
       },
     ],
   },
+  // Allow access from mobile devices on the same network during dev
+  server: {
+    host: true,
+    port: 5173,
+  },
 });
