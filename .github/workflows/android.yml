@@ -1,0 +1,56 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - newreview-branch-for-improvements-and-fixes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install root deps
+        run: npm install
+
+      - name: Install frontend deps
+        run: |
+          cd src/frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd src/frontend
+          npm run build
+
+      - name: Install Capacitor
+        run: |
+          npm install @capacitor/cli
+
+      - name: Add Android platform
+        run: |
+          npx cap add android || true
+
+      - name: Sync Capacitor
+        run: |
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
