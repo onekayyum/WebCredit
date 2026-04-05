@@ -202,7 +202,7 @@ export function TransactionHistory({ customerBalance, onBack }: Props) {
                             : "bg-destructive/15 text-destructive border-0"
                         }`}
                       >
-                        {tx.txType === "payment" ? "Payment" : "Udhaar"}
+                        {tx.txType === "payment" ? "Payment" : "Credit"}
                       </Badge>
                       {isBatch && (
                         <Badge className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-0">

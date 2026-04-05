@@ -1,32 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useMemo } from "react";
 import type { backendInterface } from "../backendTypes";
 import { createActorWithConfig } from "../config";
 
-const ACTOR_QUERY_KEY = "actor";
-
+/**
+ * Returns a stable REST-backend actor.
+ * The previous implementation wrapped the actor in a react-query cache, then
+ * invalidated + refetched *every other query* whenever the actor reference
+ * changed. Since the REST backend is stateless (no canister reference to
+ * track), a simple useMemo is sufficient and avoids the unnecessary
+ * cascade of refetches.
+ */
 export function useActor() {
-  const queryClient = useQueryClient();
-  const actorQuery = useQuery<backendInterface>({
-    queryKey: [ACTOR_QUERY_KEY],
-    queryFn: async () => createActorWithConfig(),
-    staleTime: Number.POSITIVE_INFINITY,
-    enabled: true,
-  });
-
-  useEffect(() => {
-    if (actorQuery.data) {
-      queryClient.invalidateQueries({
-        predicate: (query) => !query.queryKey.includes(ACTOR_QUERY_KEY),
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => !query.queryKey.includes(ACTOR_QUERY_KEY),
-      });
-    }
-  }, [actorQuery.data, queryClient]);
+  const actor = useMemo<backendInterface>(() => createActorWithConfig(), []);
 
   return {
-    actor: actorQuery.data || null,
-    isFetching: actorQuery.isFetching,
+    actor,
+    isFetching: false,
   };
 }

@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Product } from "../backendTypes";
 import { useCamera } from "../camera/useCamera";
-import { useCSVProducts } from "../hooks/useCSVProducts";
 import {
   useAddBatchTransaction,
   useAddProduct,
@@ -61,46 +60,29 @@ function clearSession(customerId: bigint) {
   localStorage.removeItem(`batchSession_${customerId.toString()}`);
 }
 
-function csvToProduct(csv: {
-  name: string;
-  price: number;
-  barcode: string;
-}): Product {
-  return {
-    id: 0n,
-    name: csv.name,
-    price: csv.price,
-    barcode: csv.barcode,
-    createdAt: 0n,
-  };
-}
-
 // WhatsApp receipt generator
 function buildWhatsAppMessage(
   customerName: string,
   items: SessionItem[],
   total: number,
   remainingBalance: number,
-  currencySymbol: string,
 ): string {
-  const date = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const date = new Date().toISOString().slice(0, 10);
   const lines = [
-    "*Udhaar Receipt*",
-    `Customer: ${customerName}`,
-    `Date: ${date}`,
+    "Ledger Receipt",
     "",
-    "*Items:*",
+    `Customer: ${customerName}`,
+    "",
+    "Items:",
     ...items.map(
-      (i) =>
-        `• ${i.name} × ${i.qty} = ${currencySymbol}${(i.price * i.qty).toFixed(2)}`,
+      (i) => `- ${i.name} x${i.qty} = ${formatCurrency(i.price * i.qty)}`,
     ),
     "",
-    `*Total Added: ${currencySymbol}${total.toFixed(2)}*`,
-    `Remaining Balance: ${currencySymbol}${remainingBalance.toFixed(2)}`,
+    `Total: ${formatCurrency(total)}`,
+    `Balance: ${formatCurrency(remainingBalance)}`,
+    `Date: ${date}`,
+    "",
+    "Thank you!",
   ];
   return lines.join("\n");
 }
@@ -152,14 +134,9 @@ export function BatchUdhaarScreen({
   );
 
   const { data: allProducts } = useAllProducts();
-  const { csvProducts } = useCSVProducts();
   const addBatchTx = useAddBatchTransaction();
   const addProductMutation = useAddProduct();
   const { data: balanceSummary } = useCustomerBalance(customerId);
-
-  const currencySymbol =
-    localStorage.getItem("currencySymbol") ||
-    (navigator.language.startsWith("ar") ? "د.إ" : "₹");
 
   const {
     isActive,
@@ -240,11 +217,7 @@ export function BatchUdhaarScreen({
               return;
             }
 
-            const found =
-              allProducts?.find((p) => p.barcode === barcode) ??
-              (csvProducts.find((p) => p.barcode === barcode)
-                ? csvToProduct(csvProducts.find((p) => p.barcode === barcode)!)
-                : undefined);
+            const found = allProducts?.find((p) => p.barcode === barcode);
 
             if (found) {
               addOrIncrement(found);
@@ -278,7 +251,6 @@ export function BatchUdhaarScreen({
     isActive,
     videoRef,
     allProducts,
-    csvProducts,
     addOrIncrement,
     openAddManually,
   ]);
@@ -325,14 +297,8 @@ export function BatchUdhaarScreen({
       setManualBarcode("");
       return;
     }
-    const csvFound = csvProducts.find((p) => p.barcode === bc);
-    if (csvFound) {
-      addOrIncrement(csvToProduct(csvFound));
-      setManualBarcode("");
-    } else {
-      openAddManually(bc);
-      setManualBarcode("");
-    }
+    openAddManually(bc);
+    setManualBarcode("");
   };
 
   const handleSaveManually = async () => {
@@ -403,7 +369,7 @@ export function BatchUdhaarScreen({
     });
     if (result) {
       clearSession(customerId);
-      toast.success(`Udhaar saved — ${formatCurrency(snapshotTotal)}`);
+      toast.success(`Credit saved — ${formatCurrency(snapshotTotal)}`);
       // Show WhatsApp prompt
       setWhatsappPrompt({
         show: true,
@@ -411,7 +377,7 @@ export function BatchUdhaarScreen({
         savedTotal: snapshotTotal,
       });
     } else {
-      toast.error("Failed to save udhaar");
+      toast.error("Failed to save credit");
     }
   };
 
@@ -435,7 +401,6 @@ export function BatchUdhaarScreen({
       whatsappPrompt.savedItems,
       whatsappPrompt.savedTotal,
       balance,
-      currencySymbol,
     );
     openWhatsApp(mobile, message);
     setWhatsappPrompt(null);
@@ -479,7 +444,7 @@ export function BatchUdhaarScreen({
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-white font-bold text-base leading-tight truncate">
-              Batch Udhaar
+              Batch Credit
             </h1>
             <p className="text-white/60 text-xs truncate">{customerName}</p>
           </div>

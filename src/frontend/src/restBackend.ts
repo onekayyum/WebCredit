@@ -1,3 +1,4 @@
+import { API_BASE } from "./apiConfig";
 import type {
   Customer,
   CustomerBalance,
@@ -5,8 +6,7 @@ import type {
   Transaction,
   backendInterface,
 } from "./backendTypes";
-
-const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "";
+import { clearAuthSession, getToken } from "./utils/auth";
 
 function toBigInt(value: string | number | bigint): bigint {
   return typeof value === "bigint" ? value : BigInt(value);
@@ -55,22 +55,96 @@ function mapBalance(b: any): CustomerBalance {
 }
 
 async function invoke(method: string, payload: object = {}): Promise<any> {
-  const response = await fetch(`${API_BASE}/api/backend/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const url = `${API_BASE}/api/backend/${method}`;
+  const token = getToken();
+  console.log(`[API] POST ${url}`);
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log(`[API] ${method} → ${response.status}`);
+
+    if (response.status === 401) {
+      clearAuthSession();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[API] ${method} failed:`, text);
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof TypeError) {
+      // Network error — fetch itself failed (no response at all)
+      console.error(`[API] Network error for ${method}:`, err.message);
+    }
+    throw err;
   }
-
-  return response.json();
 }
 
 export function createRestBackend(): backendInterface {
   return {
+    async exportProductsCsv() {
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/products/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (response.status === 401) {
+        clearAuthSession();
+        throw new Error("Session expired. Please login again.");
+      }
+      if (!response.ok) throw new Error(`Export failed (${response.status})`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "products.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    async importProductsCsv(file, onProgress) {
+      const token = getToken();
+      if (!token) throw new Error("Missing auth token");
+      const formData = new FormData();
+      formData.append("file", file);
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_BASE}/products/import`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && onProgress) {
+            onProgress(event.loaded, event.total);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status === 401) {
+            clearAuthSession();
+            reject(new Error("Session expired. Please login again."));
+            return;
+          }
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(
+              new Error(xhr.responseText || `Import failed (${xhr.status})`),
+            );
+            return;
+          }
+          resolve(JSON.parse(xhr.responseText));
+        };
+        xhr.onerror = () =>
+          reject(new Error("Network error during CSV import"));
+        xhr.send(formData);
+      });
+    },
     async addBatchTransaction(customerId, totalAmount, itemsJson, note) {
       const result = await invoke("addBatchTransaction", {
         customerId: customerId.toString(),

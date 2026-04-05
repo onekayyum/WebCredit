@@ -204,7 +204,7 @@ export function CustomerProfile({
         >
           <div className="stat-card">
             <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-              Udhaar
+              Credit
             </span>
             <span className="text-foreground text-base font-bold">
               {formatCurrency(cb.totalUdhaar)}
@@ -238,7 +238,7 @@ export function CustomerProfile({
             onClick={() => navigate({ id: "batchUdhaar", customer: cb })}
           >
             <Plus size={20} className="text-white/70" />
-            Add Udhaar
+            Add Credit
           </button>
           <button
             type="button"

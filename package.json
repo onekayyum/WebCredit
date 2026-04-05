@@ -1,17 +1,23 @@
 {
   "name": "webcredit",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "install:frontend": "npm install --prefix src/frontend",
     "build:frontend": "npm run build --prefix src/frontend",
     "start": "node backend-server.js",
+    "start:server": "node src/backend/server.js",
     "dev:frontend": "npm run dev --prefix src/frontend"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^7.4.1",
+    "multer": "^1.4.5-lts.1",
+    "csv-parser": "^3.0.0"
   }
 }

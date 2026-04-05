@@ -6,10 +6,13 @@ import { CustomerProfile } from "./components/CustomerProfile";
 import { CustomersScreen } from "./components/CustomersScreen";
 import { DashboardScreen } from "./components/DashboardScreen";
 import { HomeScreen } from "./components/HomeScreen";
+import { LoginScreen } from "./components/LoginScreen";
+import { OnboardingScreen } from "./components/OnboardingScreen";
 import { ProductsScreen } from "./components/ProductsScreen";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { Sidebar } from "./components/Sidebar";
 import { TransactionHistory } from "./components/TransactionHistory";
+import { useAuth } from "./hooks/useInternetIdentity";
 
 export type Screen =
   | { id: "dashboard" }
@@ -30,6 +33,10 @@ export type NavTab =
   | "settings";
 
 export default function App() {
+  const { token } = useAuth();
+  const [onboardingDone, setOnboardingDone] = useState(
+    localStorage.getItem("onboardingDone") === "true",
+  );
   const [screen, setScreen] = useState<Screen>({ id: "dashboard" });
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,6 +53,23 @@ export default function App() {
   const goHome = () => navigate({ id: "udhar" });
 
   const isUdhar = screen.id === "udhar" || screen.id === "home";
+
+  if (!token) {
+    return (
+      <>
+        <LoginScreen />
+        <Toaster position="bottom-center" />
+      </>
+    );
+  }
+  if (!onboardingDone) {
+    return (
+      <>
+        <OnboardingScreen onDone={() => setOnboardingDone(true)} />
+        <Toaster position="bottom-center" />
+      </>
+    );
+  }
 
   return (
     <div
