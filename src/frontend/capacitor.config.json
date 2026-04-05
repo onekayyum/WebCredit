@@ -1,0 +1,11 @@
+{
+  "appId": "com.ledger.app",
+  "appName": "Ledger",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
