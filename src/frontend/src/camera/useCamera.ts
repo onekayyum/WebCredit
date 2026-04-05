@@ -14,6 +14,20 @@ export interface CameraError {
   message: string;
 }
 
+type NativeCameraPermissionState = "granted" | "limited" | "denied" | "prompt" | string;
+type NativeCameraPlugin = {
+  requestPermissions?: (options: {
+    permissions: string[];
+  }) => Promise<{ camera?: NativeCameraPermissionState }>;
+  checkPermissions?: () => Promise<{ camera?: NativeCameraPermissionState }>;
+};
+
+function getNativeCameraPlugin(): NativeCameraPlugin | null {
+  const plugins = (globalThis as { Capacitor?: { Plugins?: { Camera?: NativeCameraPlugin } } })
+    ?.Capacitor?.Plugins;
+  return plugins?.Camera ?? null;
+}
+
 /**
  * Request camera permission via the Capacitor Camera plugin (native)
  * or fall through to the browser prompt (web).
@@ -23,8 +37,9 @@ export interface CameraError {
 async function requestCameraPermission(): Promise<boolean> {
   if (isNativePlatform()) {
     try {
-      const { Camera } = await import("@capacitor/camera");
-      const status = await Camera.requestPermissions({
+      const camera = getNativeCameraPlugin();
+      if (!camera?.requestPermissions) return false;
+      const status = await camera.requestPermissions({
         permissions: ["camera"],
       });
       console.log("[Camera] Capacitor permission status:", status);
@@ -46,8 +61,9 @@ async function checkCameraPermission(): Promise<
 > {
   if (isNativePlatform()) {
     try {
-      const { Camera } = await import("@capacitor/camera");
-      const status = await Camera.checkPermissions();
+      const camera = getNativeCameraPlugin();
+      if (!camera?.checkPermissions) return "prompt";
+      const status = await camera.checkPermissions();
       if (status.camera === "granted" || status.camera === "limited")
         return "granted";
       if (status.camera === "denied") return "denied";

@@ -3,6 +3,17 @@ import db from "../db.js";
 import { authMiddleware } from "../middleware/auth.js";
 
 const router = Router();
+const ALLOWED_LANGUAGES = new Set(["en", "hi", "ur", "ar"]);
+const ALLOWED_CURRENCIES = new Set([
+  "USD",
+  "EUR",
+  "GBP",
+  "INR",
+  "PKR",
+  "AED",
+  "SAR",
+]);
+const MAX_BUSINESS_NAME_LENGTH = 120;
 
 router.get("/", authMiddleware, (req, res) => {
   const userId = req.user.id;
@@ -36,9 +47,14 @@ router.put("/", authMiddleware, (req, res) => {
   const inactiveDays = Number(b.inactiveDays ?? 7);
   const reminderEnabled = b.reminderEnabled ? 1 : 0;
 
-  const allowedLangs = ["en", "hi", "ur", "ar"];
-  if (!allowedLangs.includes(language)) {
+  if (!ALLOWED_LANGUAGES.has(language)) {
     return res.status(400).json({ error: "Invalid language" });
+  }
+  if (!ALLOWED_CURRENCIES.has(currency)) {
+    return res.status(400).json({ error: "Invalid currency" });
+  }
+  if (businessName.length > MAX_BUSINESS_NAME_LENGTH) {
+    return res.status(400).json({ error: "businessName is too long" });
   }
   if (!Number.isFinite(threshold) || threshold < 0) {
     return res.status(400).json({ error: "Invalid threshold" });
