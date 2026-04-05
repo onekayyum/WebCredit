@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { useI18n } from "../i18n";
 import { toast } from "sonner";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useAuth } from "../hooks/useInternetIdentity";
+import { useI18n } from "../i18n";
 
 export function LoginScreen() {
   const { t } = useI18n();
-  const { login, signup, isLoggingIn, loginError } = useInternetIdentity();
+  const { login, signup, isLoggingIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -25,8 +25,6 @@ export function LoginScreen() {
 
     if (ok) {
       toast.success(mode === "login" ? "Logged in" : "Account created");
-    } else if (loginError) {
-      toast.error(loginError.message);
     } else {
       toast.error("Authentication failed");
     }
@@ -37,7 +35,9 @@ export function LoginScreen() {
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 space-y-4">
         <h1 className="text-xl font-semibold">{t("app_name")}</h1>
         <p className="text-sm text-muted-foreground">
-          {mode === "login" ? `${t("login")} to continue` : "Create your account"}
+          {mode === "login"
+            ? `${t("login")} to continue`
+            : "Create your account"}
         </p>
         <Input
           value={username}
@@ -56,15 +56,25 @@ export function LoginScreen() {
             }
           }}
         />
-        <Button className="w-full" onClick={() => void handleSubmit()} disabled={isLoggingIn}>
-          {isLoggingIn ? "Please wait..." : mode === "login" ? t("login") : t("signup")}
+        <Button
+          className="w-full"
+          onClick={() => void handleSubmit()}
+          disabled={isLoggingIn}
+        >
+          {isLoggingIn
+            ? "Please wait..."
+            : mode === "login"
+              ? t("login")
+              : t("signup")}
         </Button>
         <Button
           variant="ghost"
           className="w-full"
           onClick={() => setMode((m) => (m === "login" ? "signup" : "login"))}
         >
-          {mode === "login" ? "Need an account? Sign up" : "Have an account? Login"}
+          {mode === "login"
+            ? "Need an account? Sign up"
+            : "Have an account? Login"}
         </Button>
       </div>
     </div>

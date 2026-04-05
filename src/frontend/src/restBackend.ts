@@ -1,3 +1,4 @@
+import { API_BASE } from "./apiConfig";
 import type {
   Customer,
   CustomerBalance,
@@ -6,8 +7,6 @@ import type {
   backendInterface,
 } from "./backendTypes";
 import { clearAuthSession, getToken } from "./utils/auth";
-
-const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "";
 
 function toBigInt(value: string | number | bigint): bigint {
   return typeof value === "bigint" ? value : BigInt(value);
@@ -56,27 +55,41 @@ function mapBalance(b: any): CustomerBalance {
 }
 
 async function invoke(method: string, payload: object = {}): Promise<any> {
+  const url = `${API_BASE}/api/backend/${method}`;
   const token = getToken();
-  const response = await fetch(`${API_BASE}/api/backend/${method}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  console.log(`[API] POST ${url}`);
 
-  if (response.status === 401) {
-    clearAuthSession();
-    throw new Error("Session expired. Please login again.");
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log(`[API] ${method} → ${response.status}`);
+
+    if (response.status === 401) {
+      clearAuthSession();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[API] ${method} failed:`, text);
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof TypeError) {
+      // Network error — fetch itself failed (no response at all)
+      console.error(`[API] Network error for ${method}:`, err.message);
+    }
+    throw err;
   }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
-  }
-
-  return response.json();
 }
 
 export function createRestBackend(): backendInterface {
@@ -120,12 +133,15 @@ export function createRestBackend(): backendInterface {
             return;
           }
           if (xhr.status < 200 || xhr.status >= 300) {
-            reject(new Error(xhr.responseText || `Import failed (${xhr.status})`));
+            reject(
+              new Error(xhr.responseText || `Import failed (${xhr.status})`),
+            );
             return;
           }
           resolve(JSON.parse(xhr.responseText));
         };
-        xhr.onerror = () => reject(new Error("Network error during CSV import"));
+        xhr.onerror = () =>
+          reject(new Error("Network error during CSV import"));
         xhr.send(formData);
       });
     },

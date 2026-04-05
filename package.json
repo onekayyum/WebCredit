@@ -1,12 +1,13 @@
 {
   "name": "webcredit",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "install:frontend": "npm install --prefix src/frontend",
     "build:frontend": "npm run build --prefix src/frontend",
     "start": "node backend-server.js",
+    "start:server": "node src/backend/server.js",
     "dev:frontend": "npm run dev --prefix src/frontend"
   },
   "dependencies": {
