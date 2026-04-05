@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { API_BASE } from "../apiConfig";
 import {
   AUTH_EVENT,
   clearAuthSession,
@@ -15,8 +16,6 @@ import {
   getToken,
   setAuthSession,
 } from "../utils/auth";
-
-const API_BASE = import.meta.env.VITE_BACKEND_BASE_URL || "";
 
 export type Status = "idle" | "loading" | "success" | "error";
 
