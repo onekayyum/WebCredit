@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isNativePlatform } from "../utils/platform";
 
 export interface CameraConfig {
   facingMode?: "user" | "environment";
@@ -11,6 +12,59 @@ export interface CameraConfig {
 export interface CameraError {
   type: "permission" | "not-supported" | "not-found" | "unknown";
   message: string;
+}
+
+/**
+ * Request camera permission via the Capacitor Camera plugin (native)
+ * or fall through to the browser prompt (web).
+ *
+ * Returns true when permission is granted.
+ */
+async function requestCameraPermission(): Promise<boolean> {
+  if (isNativePlatform()) {
+    try {
+      const { Camera } = await import("@capacitor/camera");
+      const status = await Camera.requestPermissions({
+        permissions: ["camera"],
+      });
+      console.log("[Camera] Capacitor permission status:", status);
+      return status.camera === "granted" || status.camera === "limited";
+    } catch (err) {
+      console.warn("[Camera] Capacitor permission request failed:", err);
+      return false;
+    }
+  }
+  // On web the browser handles permission via getUserMedia
+  return true;
+}
+
+/**
+ * Check current camera permission without prompting.
+ */
+async function checkCameraPermission(): Promise<
+  "granted" | "denied" | "prompt"
+> {
+  if (isNativePlatform()) {
+    try {
+      const { Camera } = await import("@capacitor/camera");
+      const status = await Camera.checkPermissions();
+      if (status.camera === "granted" || status.camera === "limited")
+        return "granted";
+      if (status.camera === "denied") return "denied";
+      return "prompt";
+    } catch {
+      return "prompt";
+    }
+  }
+  // Web: use the Permissions API if available
+  try {
+    const result = await navigator.permissions.query({
+      name: "camera" as PermissionName,
+    });
+    return result.state as "granted" | "denied" | "prompt";
+  } catch {
+    return "prompt";
+  }
 }
 
 export const useCamera = (config: CameraConfig = {}) => {
@@ -33,10 +87,18 @@ export const useCamera = (config: CameraConfig = {}) => {
   const streamRef = useRef<MediaStream | null>(null);
   const isMountedRef = useRef(true);
 
-  // Check browser support
+  // Check browser / WebView support
   useEffect(() => {
-    const supported = !!navigator.mediaDevices?.getUserMedia;
-    setIsSupported(supported);
+    const check = async () => {
+      // On native, camera is always "supported" (native plugin handles it)
+      if (isNativePlatform()) {
+        setIsSupported(true);
+        return;
+      }
+      const supported = !!navigator.mediaDevices?.getUserMedia;
+      setIsSupported(supported);
+    };
+    check();
   }, []);
 
   // Cleanup on unmount
@@ -73,7 +135,9 @@ export const useCamera = (config: CameraConfig = {}) => {
           },
         };
 
+        console.log("[Camera] Requesting media stream:", constraints);
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log("[Camera] Media stream acquired");
 
         if (!isMountedRef.current) {
           for (const track of stream.getTracks()) {
@@ -83,21 +147,23 @@ export const useCamera = (config: CameraConfig = {}) => {
         }
 
         return stream;
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as { name?: string };
         let errorType: CameraError["type"] = "unknown";
         let errorMessage = "Failed to access camera";
 
-        if (err.name === "NotAllowedError") {
+        if (error.name === "NotAllowedError") {
           errorType = "permission";
           errorMessage = "Camera permission denied";
-        } else if (err.name === "NotFoundError") {
+        } else if (error.name === "NotFoundError") {
           errorType = "not-found";
           errorMessage = "No camera device found";
-        } else if (err.name === "NotSupportedError") {
+        } else if (error.name === "NotSupportedError") {
           errorType = "not-supported";
           errorMessage = "Camera is not supported";
         }
 
+        console.error("[Camera] getUserMedia failed:", errorType, errorMessage);
         throw { type: errorType, message: errorMessage };
       }
     },
@@ -117,8 +183,7 @@ export const useCamera = (config: CameraConfig = {}) => {
 
         // Try to play the video
         video.play().catch((err) => {
-          console.warn("Video autoplay failed:", err);
-          // This is often okay - user interaction might be needed
+          console.warn("[Camera] Video autoplay failed:", err);
         });
 
         resolve(true);
@@ -149,6 +214,32 @@ export const useCamera = (config: CameraConfig = {}) => {
     setError(null);
 
     try {
+      // On native, request permission via Capacitor first
+      if (isNativePlatform()) {
+        const permStatus = await checkCameraPermission();
+        console.log("[Camera] Current permission:", permStatus);
+
+        if (permStatus === "denied") {
+          const granted = await requestCameraPermission();
+          if (!granted) {
+            throw {
+              type: "permission" as const,
+              message:
+                "Camera permission denied. Please enable it in device settings.",
+            };
+          }
+        } else if (permStatus === "prompt") {
+          const granted = await requestCameraPermission();
+          if (!granted) {
+            throw {
+              type: "permission" as const,
+              message: "Camera permission is required for scanning.",
+            };
+          }
+        }
+        console.log("[Camera] Permission granted, opening stream...");
+      }
+
       // Clean up any existing stream
       cleanup();
 
@@ -160,14 +251,15 @@ export const useCamera = (config: CameraConfig = {}) => {
 
       if (success && isMountedRef.current) {
         setIsActive(true);
+        console.log("[Camera] Camera started successfully");
         return true;
       }
 
       cleanup();
       return false;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMountedRef.current) {
-        setError(err);
+        setError(err as CameraError);
       }
 
       cleanup();
@@ -237,9 +329,9 @@ export const useCamera = (config: CameraConfig = {}) => {
 
         cleanup();
         return false;
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (isMountedRef.current) {
-          setError(err);
+          setError(err as CameraError);
         }
 
         cleanup();

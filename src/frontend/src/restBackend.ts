@@ -55,27 +55,41 @@ function mapBalance(b: any): CustomerBalance {
 }
 
 async function invoke(method: string, payload: object = {}): Promise<any> {
+  const url = `${API_BASE}/api/backend/${method}`;
   const token = getToken();
-  const response = await fetch(`${API_BASE}/api/backend/${method}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  console.log(`[API] POST ${url}`);
 
-  if (response.status === 401) {
-    clearAuthSession();
-    throw new Error("Session expired. Please login again.");
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log(`[API] ${method} → ${response.status}`);
+
+    if (response.status === 401) {
+      clearAuthSession();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[API] ${method} failed:`, text);
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof TypeError) {
+      // Network error — fetch itself failed (no response at all)
+      console.error(`[API] Network error for ${method}:`, err.message);
+    }
+    throw err;
   }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
-  }
-
-  return response.json();
 }
 
 export function createRestBackend(): backendInterface {

@@ -1,15 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Network security config for development.
-  Allows cleartext (HTTP) traffic to localhost and private IPs
-  so the app can reach your dev backend.
-  For production, remove the cleartextTrafficPermitted entries.
+  Network security config.
+
+  For DEVELOPMENT builds, cleartext (HTTP) traffic is allowed to:
+    - localhost / 10.0.2.2 (Android emulator → host)
+    - your server IP (add it below)
+
+  For PRODUCTION builds, set your backend to HTTPS and remove
+  the cleartextTrafficPermitted="true" block, or restrict it to
+  only the domains you need.
 -->
 <network-security-config>
+  <!-- Default: block cleartext for all domains not listed below -->
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+
+  <!-- Development: allow HTTP to local / emulator addresses -->
   <domain-config cleartextTrafficPermitted="true">
-    <domain includeSubdomains="true">localhost</domain>
-    <domain includeSubdomains="true">10.0.2.2</domain>
-    <domain includeSubdomains="true">10.0.0.0</domain>
-    <domain includeSubdomains="true">192.168.0.0</domain>
+    <domain includeSubdomains="false">localhost</domain>
+    <!-- Android emulator loopback to host machine -->
+    <domain includeSubdomains="false">10.0.2.2</domain>
+    <!--
+      Add your dev server IP here, e.g.:
+      <domain includeSubdomains="false">192.168.1.100</domain>
+      <domain includeSubdomains="false">128.85.36.93</domain>
+    -->
   </domain-config>
 </network-security-config>
