@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
@@ -31,17 +31,20 @@ jobs:
           cd src/frontend
           npm run build
 
-      - name: Install Capacitor
-        run: |
-          npm install @capacitor/cli
+      - name: Install Capacitor CLI
+        run: npm install @capacitor/cli
 
       - name: Add Android platform
-        run: |
-          npx cap add android || true
+        run: npx cap add android || true
 
       - name: Sync Capacitor
-        run: |
-          npx cap sync android
+        run: npx cap sync android
+
+      - name: Setup Java (required for Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Build APK
         run: |
