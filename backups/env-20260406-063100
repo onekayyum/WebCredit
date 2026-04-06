@@ -1,0 +1,5 @@
+NODE_ENV=production
+PORT=3001
+JWT_SECRET=0423b806fa134a5f9f7614b8dae08fd482b5c5a2e4121f97209acf02177b6b20
+ALLOWED_ORIGIN=https://memelith.fun
+DB_PATH=/home/Onekayyum/WebCredit/data/app.db
