@@ -18,14 +18,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install root deps
+      - name: Install root dependencies
         run: npm install
 
-      - name: Install frontend deps
-        run: npm install --prefix src/frontend
+      - name: Install frontend dependencies
+        run: |
+          cd src/frontend
+          npm install
 
       - name: Build frontend
-        run: npm run build --prefix src/frontend
+        run: |
+          cd src/frontend
+          npm run build
 
       - name: Install Capacitor
         run: |
@@ -33,7 +37,9 @@ jobs:
           npm install @capacitor/android
 
       - name: Sync Capacitor
-        run: npx cap sync android --prefix src/frontend
+        run: |
+          cd src/frontend
+          npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4
