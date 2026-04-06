@@ -22,25 +22,20 @@ jobs:
         run: npm install
 
       - name: Install frontend deps
-        run: |
-          cd src/frontend
-          npm install
+        run: npm install --prefix src/frontend
 
       - name: Build frontend
+        run: npm run build --prefix src/frontend
+
+      - name: Install Capacitor
         run: |
-          cd src/frontend
-          npm run build
-
-      - name: Install Capacitor CLI
-        run: npm install @capacitor/cli
-
-      - name: Add Android platform
-        run: npx cap add android || true
+          npm install @capacitor/cli
+          npm install @capacitor/android
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: npx cap sync android --prefix src/frontend
 
-      - name: Setup Java (required for Android)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -48,7 +43,7 @@ jobs:
 
       - name: Build APK
         run: |
-          cd android
+          cd src/frontend/android
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -56,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: src/frontend/android/app/build/outputs/apk/debug/app-debug.apk
