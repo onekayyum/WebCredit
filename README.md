@@ -1,242 +1,278 @@
-# WebCredit (Standard Node.js + SQLite Edition)
+# WebCredit
 
-This project no longer needs Motoko, ICP canisters, or Caffeine runtime services.
+WebCredit is a full-stack credit ledger app for small businesses.
 
-You now run it like a normal app:
-- Backend: **Node.js + Express**
-- Database: **SQLite file** (`data/app.db`)
-- Frontend: **React + Vite**
+- **Backend:** Node.js + Express + SQLite
+- **Frontend:** React + Vite + TypeScript
+- **Auth:** JWT (username/password)
+- **Data:** Local SQLite database with automatic migrations
 
 ---
 
-## 1) Project structure (what is what)
+## Features
+
+- User authentication (`/auth/signup`, `/auth/login`)
+- Customer management
+- Product management
+- CSV product export/import
+- Udhaar/payment transaction tracking
+- Batch transaction entry
+- Dashboard analytics (high balance, inactive customers)
+- User settings (language, currency, thresholds/reminders)
+
+---
+
+## Repository structure
 
 ```text
-backend-server.js                # Main backend server (all API methods)
-package.json                     # Root scripts (npm start)
-src/frontend/                    # Frontend app
-src/frontend/src/backendTypes.ts # Shared API types frontend expects
-src/frontend/src/restBackend.ts  # Frontend adapter -> calls backend endpoints
+backend-server.js              # Legacy entry point (imports src/backend/server.js)
+package.json                   # Root scripts and backend dependencies
+src/backend/                   # Express backend
+  db.js                        # SQLite connection and DB path
+  migrations.js                # Schema migrations
+  middleware/                  # auth, logger, rate limits
+  routes/                      # auth/products/settings/api
+src/frontend/                  # Vite React frontend
+  package.json
+  src/
+    App.tsx
+    components/
+    hooks/
+    restBackend.ts             # Frontend -> backend adapter
+    apiConfig.ts               # API base URL resolution
 ```
 
 ---
 
-## 2) API compatibility promise
+## Requirements
 
-Frontend still calls the same backend method names:
-
-- `addCustomer`, `updateCustomer`, `deleteCustomer`, `getAllCustomers`, `searchCustomers`
-- `addProduct`, `updateProduct`, `deleteProduct`, `getAllProducts`, `searchProducts`, `bulkImportProducts`
-- `addTransaction`, `addBatchTransaction`, `deleteTransaction`, `getTransactionsForCustomer`
-- `getCustomerBalanceSummary`, `getCustomersSortedByBalance`, `getHighBalanceCustomers`, `getInactiveCustomers`
-
-Route used by backend:
-
-- `POST /api/backend/:method`
-
-So frontend business flow stays the same, without changing component API calls.
+- Node.js 20+
+- npm 10+
+- Linux/macOS/Windows (Ubuntu instructions below)
 
 ---
 
-## 3) Run locally (simple)
+## Environment variables (backend)
 
-### Step A — Install Node.js (if not installed)
+Create a `.env` file in repository root for production.
 
-On Ubuntu:
+```env
+NODE_ENV=production
+PORT=3001
+JWT_SECRET=replace-with-a-long-random-secret
+ALLOWED_ORIGIN=https://your-domain.com
+DB_PATH=/absolute/path/to/app.db
 
-```bash
-sudo apt update
-sudo apt install -y nodejs npm
-node -v
-npm -v
+# Optional tuning
+IMPORT_BATCH_SIZE=500
+MAX_IMPORT_ROWS=100000
+MAX_BULK_IMPORT_ROWS=100000
+BULK_IMPORT_CHUNK_SIZE=1000
+BCRYPT_ROUNDS=10
 ```
 
-### Step B — Go to project folder
+### Important behavior
 
-```bash
-cd /path/to/WebCredit
-```
-
-### Step C — Install backend dependencies
-
-```bash
-npm install
-```
-
-### Step D — Install frontend dependencies
-
-```bash
-npm run install:frontend
-```
-
-### Step E — Build frontend files
-
-```bash
-npm run build:frontend
-```
-
-### Step F — Start app
-
-```bash
-npm start
-```
-
-Now open browser:
-
-- `http://localhost:3001`
-
-Health check:
-
-- `http://localhost:3001/health`
+- In non-dev/test environments, backend startup **fails** if `ALLOWED_ORIGIN` is missing.
+- In non-dev/test environments, backend startup **fails** if `JWT_SECRET` is left default.
+- `ALLOWED_ORIGIN` supports **comma-separated origins** (recommended when serving both web + mobile), for example:
+  `ALLOWED_ORIGIN=https://your-domain.com,https://localhost,http://localhost`
 
 ---
 
-## 4) Host on Ubuntu server (ELI6 style)
+## Local development
 
-Think of this like feeding and starting a toy robot.
-
-### 4.1 Put code on server
-
-```bash
-git clone <YOUR_REPO_URL>
-cd WebCredit
-```
-
-### 4.2 Install Node + npm
-
-```bash
-sudo apt update
-sudo apt install -y nodejs npm
-```
-
-### 4.3 Install app packages
+### 1) Install dependencies
 
 ```bash
 npm install
 npm run install:frontend
 ```
 
-### 4.4 Build the frontend
+### 2) Run backend + frontend
+
+Backend (port 3001):
+
+```bash
+npm run start:server
+```
+
+Frontend dev server (port 5173):
+
+```bash
+npm run dev:frontend
+```
+
+### 3) Build frontend for production serving
 
 ```bash
 npm run build:frontend
 ```
 
-### 4.5 Start app once (quick test)
+After build, backend serves `src/frontend/dist` automatically.
+
+---
+
+## Production deployment on Ubuntu (safe method)
+
+This approach keeps rollback easy.
+
+### 1) Clone and install
 
 ```bash
-npm start
+git clone <YOUR_REPO_URL> /var/www/webcredit
+cd /var/www/webcredit
+npm ci
+npm ci --prefix src/frontend
+npm run build --prefix src/frontend
 ```
 
-Visit:
-
-```text
-http://YOUR_SERVER_IP:3001
-```
-
-Press `Ctrl + C` to stop.
-
-### 4.6 Keep app running forever with PM2
-
-Install PM2:
+### 2) Create `.env`
 
 ```bash
-sudo npm install -g pm2
+cat > .env <<'ENV'
+NODE_ENV=production
+PORT=3001
+JWT_SECRET=replace-with-strong-secret
+ALLOWED_ORIGIN=https://your-domain.com
+DB_PATH=/var/www/webcredit/shared/data/app.db
+ENV
 ```
 
-Start app with PM2:
+### 3) Start with PM2
 
 ```bash
+npm install -g pm2
 pm2 start npm --name webcredit -- start
-```
-
-Save PM2 process list:
-
-```bash
 pm2 save
-```
-
-Enable restart on reboot:
-
-```bash
 pm2 startup
 ```
 
-(Then copy-paste the command PM2 prints.)
-
-### 4.7 Open firewall (if UFW enabled)
+### 4) Health check
 
 ```bash
-sudo ufw allow 3001/tcp
-sudo ufw status
+curl -i http://127.0.0.1:3001/health
 ```
 
 ---
 
-## 5) Optional: Nginx reverse proxy (nice domain)
+## Upgrade with backup + rollback
 
-Install Nginx:
-
-```bash
-sudo apt install -y nginx
-```
-
-Create config:
+### Backup current release
 
 ```bash
-sudo nano /etc/nginx/sites-available/webcredit
+cd /var/www/webcredit
+TS=$(date +%Y%m%d-%H%M%S)
+mkdir -p backups
+
+tar --exclude='node_modules' -czf backups/app-files-$TS.tgz .
+[ -f .env ] && cp .env backups/.env-$TS
+
+# SQLite backup
+if [ -f shared/data/app.db ]; then
+  sqlite3 shared/data/app.db ".backup 'backups/app-db-$TS.sqlite'"
+fi
 ```
 
-Paste:
-
-```nginx
-server {
-    listen 80;
-    server_name YOUR_DOMAIN_OR_IP;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Enable it:
+### Deploy new branch
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/webcredit /etc/nginx/sites-enabled/webcredit
-sudo nginx -t
-sudo systemctl restart nginx
+git fetch --all --prune
+git checkout WebCredit-Fixed
+npm ci
+npm ci --prefix src/frontend
+npm run build --prefix src/frontend
+pm2 restart webcredit --update-env
 ```
 
-Now open:
-
-- `http://YOUR_DOMAIN_OR_IP`
-
----
-
-## 6) Data storage
-
-SQLite database file is created automatically at:
-
-```text
-data/app.db
-```
-
-Backup example:
+### Rollback
 
 ```bash
-cp data/app.db data/app-backup-$(date +%F).db
+# restore previous git branch/commit
+git checkout <PREVIOUS_BRANCH_OR_COMMIT>
+
+# restore database backup if needed
+cp backups/app-db-<TIMESTAMP>.sqlite shared/data/app.db
+
+pm2 restart webcredit --update-env
 ```
 
 ---
 
-## 7) Developer notes
+## API surface
 
-- Frontend talks to backend through `src/frontend/src/restBackend.ts`.
-- Backend route dispatcher is in `backend-server.js`.
-- No Motoko backend is required to run the app.
+- `POST /auth/signup`
+- `POST /auth/login`
+- `GET /settings`
+- `PUT /settings`
+- `GET /products/export`
+- `POST /products/import` (multipart form-data field name: `file`)
+- `POST /api/backend/:method`
+  - Customers: `addCustomer`, `updateCustomer`, `deleteCustomer`, `getAllCustomers`, `searchCustomers`
+  - Products: `addProduct`, `updateProduct`, `deleteProduct`, `getAllProducts`, `searchProducts`, `bulkImportProducts`
+  - Transactions: `addTransaction`, `addBatchTransaction`, `deleteTransaction`, `getTransactionsForCustomer`
+  - Analytics: `getCustomerBalanceSummary`, `getCustomersSortedByBalance`, `getHighBalanceCustomers`, `getInactiveCustomers`
+
+---
+
+## CSV import notes
+
+- Upload via `POST /products/import` with field name `file`.
+- Required headers: `name,price,barcode`
+- UTF-8 BOM headers are supported.
+- Max upload size: **25MB**.
+- Import summary returns: `totalRows`, `imported`, `updated`, `skipped`.
+
+---
+
+## Scripts
+
+From repository root:
+
+```bash
+npm start                 # start backend through backend-server.js
+npm run start:server      # start backend directly
+npm run dev:frontend      # Vite dev server
+npm run install:frontend
+npm run build:frontend
+npm run verify:frontend   # typecheck + lint + build (frontend)
+```
+
+---
+
+## Troubleshooting
+
+### Backend exits immediately
+
+Check `.env`:
+
+- `JWT_SECRET` must be set in production
+- `ALLOWED_ORIGIN` must be set in production
+
+### Frontend cannot call API
+
+Set frontend env for mobile builds:
+
+```env
+VITE_API_URL=https://your-domain.com
+```
+
+Notes:
+- Always use an absolute URL with scheme (`https://...` or `http://...`).
+- Do not set `VITE_API_URL` to `/auth` or other path suffixes; use host/base only.
+
+For web build served by backend on same host, leaving it empty is valid.
+
+### CSV import rejects file
+
+Ensure:
+
+- file is CSV
+- headers are exactly `name,price,barcode`
+- file size <= 25MB
+
+---
+
+## License
+
+MIT (see `LICENSE`).

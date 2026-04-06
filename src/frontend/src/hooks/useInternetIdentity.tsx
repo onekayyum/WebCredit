@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { API_BASE } from "../apiConfig";
+import { buildApiUrl } from "../apiConfig";
 import {
   AUTH_EVENT,
   clearAuthSession,
@@ -88,7 +88,8 @@ export function AuthProvider({
       setLoginStatus("loading");
       setLoginError(undefined);
       try {
-        const response = await fetch(`${API_BASE}${path}`, {
+        const url = buildApiUrl(path);
+        const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username.trim(), password }),
@@ -96,7 +97,17 @@ export function AuthProvider({
 
         if (!response.ok) {
           const text = await response.text();
-          throw new Error(text || `Request failed: ${response.status}`);
+          console.error(`[Auth] ${path} failed (${response.status})`, text);
+          let message = text || `Request failed: ${response.status}`;
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed?.error) {
+              message = String(parsed.error);
+            }
+          } catch {
+            // keep plain-text response
+          }
+          throw new Error(message);
         }
 
         const data = await response.json();

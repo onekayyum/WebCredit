@@ -1,4 +1,4 @@
-import { API_BASE } from "./apiConfig";
+import { buildApiUrl } from "./apiConfig";
 import type {
   Customer,
   CustomerBalance,
@@ -55,7 +55,7 @@ function mapBalance(b: any): CustomerBalance {
 }
 
 async function invoke(method: string, payload: object = {}): Promise<any> {
-  const url = `${API_BASE}/api/backend/${method}`;
+  const url = buildApiUrl(`/api/backend/${method}`);
   const token = getToken();
   console.log(`[API] POST ${url}`);
 
@@ -96,7 +96,7 @@ export function createRestBackend(): backendInterface {
   return {
     async exportProductsCsv() {
       const token = getToken();
-      const response = await fetch(`${API_BASE}/products/export`, {
+      const response = await fetch(buildApiUrl("/products/export"), {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (response.status === 401) {
@@ -119,7 +119,7 @@ export function createRestBackend(): backendInterface {
       formData.append("file", file);
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_BASE}/products/import`);
+        xhr.open("POST", buildApiUrl("/products/import"));
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable && onProgress) {

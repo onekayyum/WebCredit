@@ -12,8 +12,9 @@ import { isNativePlatform } from "./utils/platform";
  * because the WebView has no "same origin" server.
  */
 function resolveApiBase(): string {
-  const fromEnv =
+  const rawValue =
     import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_BASE_URL || "";
+  const fromEnv = String(rawValue).trim();
 
   if (!fromEnv && isNativePlatform()) {
     console.warn(
@@ -22,8 +23,26 @@ function resolveApiBase(): string {
     );
   }
 
+  if (!fromEnv) {
+    return "";
+  }
+
+  let base = fromEnv;
+
+  // If scheme is missing, assume https for production-style hosts.
+  // (Local hosts/IPs should still be configured explicitly with http://)
+  if (!/^https?:\/\//i.test(base)) {
+    base = `https://${base}`;
+  }
+
   // Remove trailing slash for consistent URL joining
-  const base = fromEnv.replace(/\/+$/, "");
+  base = base.replace(/\/+$/, "");
+
+  // Defensive normalization: if env mistakenly includes `/auth`,
+  // keep API root at host level so `/auth/login` is not duplicated.
+  if (base.endsWith("/auth")) {
+    base = base.slice(0, -"/auth".length);
+  }
 
   if (base) {
     console.log("[API] Using API base:", base);
@@ -33,3 +52,14 @@ function resolveApiBase(): string {
 }
 
 export const API_BASE: string = resolveApiBase();
+
+export function buildApiUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!API_BASE) {
+    return normalizedPath;
+  }
+  return new URL(normalizedPath, `${API_BASE}/`).toString();
+}

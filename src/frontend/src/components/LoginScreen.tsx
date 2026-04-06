@@ -7,7 +7,7 @@ import { useI18n } from "../i18n";
 
 export function LoginScreen() {
   const { t } = useI18n();
-  const { login, signup, isLoggingIn } = useAuth();
+  const { login, signup, isLoggingIn, loginError } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -26,7 +26,7 @@ export function LoginScreen() {
     if (ok) {
       toast.success(mode === "login" ? "Logged in" : "Account created");
     } else {
-      toast.error("Authentication failed");
+      toast.error(loginError?.message || "Authentication failed");
     }
   };
 
