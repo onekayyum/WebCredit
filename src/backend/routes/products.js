@@ -9,10 +9,12 @@ import { importRateLimiter } from "../middleware/rateLimiter.js";
 import { nowNs, validateProductRow, rowProduct } from "../utils/helpers.js";
 
 const IMPORT_BATCH_SIZE = Number(process.env.IMPORT_BATCH_SIZE || 500);
+const MAX_IMPORT_ROWS = Number(process.env.MAX_IMPORT_ROWS || 100000);
+const REQUIRED_CSV_HEADERS = ["name", "price", "barcode"];
 
 const upload = multer({
   dest: path.join(process.cwd(), "tmp", "uploads"),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
 const router = Router();
@@ -36,6 +38,17 @@ router.get("/export", authMiddleware, (req, res) => {
 router.post("/import", importRateLimiter, authMiddleware, upload.single("file"), (req, res) => {
   if (!req.file?.path) {
     return res.status(400).json({ error: "CSV file is required as form-data field 'file'" });
+  }
+  const mime = String(req.file.mimetype || "").toLowerCase();
+  if (
+    mime &&
+    !mime.includes("csv") &&
+    !mime.includes("text/plain") &&
+    !mime.includes("excel") &&
+    !mime.includes("octet-stream")
+  ) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ error: "Invalid file type. Please upload a CSV file." });
   }
 
   const filePath = req.file.path;
@@ -69,6 +82,7 @@ router.post("/import", importRateLimiter, authMiddleware, upload.single("file"),
   let updated = 0;
   let skipped = 0;
   let currentBatch = [];
+  let headerChecked = false;
 
   const flush = () => {
     if (currentBatch.length === 0) return;
@@ -84,10 +98,36 @@ router.post("/import", importRateLimiter, authMiddleware, upload.single("file"),
 
   const parser = fs
     .createReadStream(filePath)
-    .pipe(csvParser({ mapHeaders: ({ header }) => String(header || "").trim().toLowerCase() }));
+    .pipe(
+      csvParser({
+        mapHeaders: ({ header }) =>
+          String(header || "")
+            .trim()
+            .replace(/^\uFEFF/, "")
+            .toLowerCase(),
+      }),
+    );
 
   parser.on("data", (row) => {
+    if (!headerChecked) {
+      headerChecked = true;
+      const normalizedHeaders = Object.keys(row).map((header) =>
+        String(header).trim().replace(/^\uFEFF/, "").toLowerCase(),
+      );
+      const hasRequiredHeaders = REQUIRED_CSV_HEADERS.every((requiredHeader) =>
+        normalizedHeaders.includes(requiredHeader),
+      );
+      if (!hasRequiredHeaders) {
+        parser.destroy(new Error("CSV must include headers: name,price,barcode"));
+        return;
+      }
+    }
+
     totalRows += 1;
+    if (totalRows > MAX_IMPORT_ROWS) {
+      parser.destroy(new Error(`CSV has too many rows. Maximum allowed is ${MAX_IMPORT_ROWS}.`));
+      return;
+    }
     const normalized = validateProductRow(row);
     if (!normalized) {
       skipped += 1;

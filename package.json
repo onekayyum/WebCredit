@@ -6,6 +6,7 @@
   "scripts": {
     "install:frontend": "npm install --prefix src/frontend",
     "build:frontend": "npm run build --prefix src/frontend",
+    "verify:frontend": "npm run typecheck --prefix src/frontend && npm run check --prefix src/frontend && npm run build --prefix src/frontend",
     "start": "node backend-server.js",
     "start:server": "node src/backend/server.js",
     "dev:frontend": "npm run dev --prefix src/frontend"

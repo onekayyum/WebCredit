@@ -13,6 +13,8 @@ import {
 } from "../utils/helpers.js";
 
 const router = Router();
+const MAX_BULK_IMPORT_ROWS = Number(process.env.MAX_BULK_IMPORT_ROWS || 100000);
+const BULK_IMPORT_CHUNK_SIZE = Number(process.env.BULK_IMPORT_CHUNK_SIZE || 1000);
 
 function getCustomerBalance(customer, userId) {
   const sums = db
@@ -43,8 +45,8 @@ router.post("/:method", authMiddleware, (req, res) => {
   const b = req.body ?? {};
   const userId = req.user.id;
 
-  // Pagination defaults
-  const limit = Math.min(Math.max(Number(b.limit) || 50, 1), 500);
+  const parseLimit = (defaultLimit, maxLimit = 10000) =>
+    Math.min(Math.max(Number(b.limit) || defaultLimit, 1), maxLimit);
   const offset = Math.max(Number(b.offset) || 0, 0);
 
   try {
@@ -117,6 +119,7 @@ router.post("/:method", authMiddleware, (req, res) => {
       );
 
     if (method === "getAllCustomers") {
+      const limit = parseLimit(10000);
       const rows = db
         .prepare(
           "SELECT * FROM customers WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
@@ -126,6 +129,7 @@ router.post("/:method", authMiddleware, (req, res) => {
     }
 
     if (method === "searchCustomers") {
+      const limit = parseLimit(100);
       const term = `%${b.term ?? ""}%`;
       return res.json(
         db
@@ -196,6 +200,8 @@ router.post("/:method", authMiddleware, (req, res) => {
       );
 
     if (method === "getAllProducts")
+      {
+        const limit = parseLimit(10000);
       return res.json(
         db
           .prepare(
@@ -204,13 +210,21 @@ router.post("/:method", authMiddleware, (req, res) => {
           .all(userId, limit, offset)
           .map(rowProduct),
       );
+      }
 
     if (method === "bulkImportProducts") {
       let added = 0;
       let skipped = 0;
       const importRows = [];
+      const rawProducts = Array.isArray(b.productList) ? b.productList : [];
 
-      for (const product of b.productList || []) {
+      if (rawProducts.length > MAX_BULK_IMPORT_ROWS) {
+        return res.status(400).json({
+          error: `Too many products in one request. Maximum is ${MAX_BULK_IMPORT_ROWS}.`,
+        });
+      }
+
+      for (const product of rawProducts) {
         const normalized = validateProductRow(product);
         if (!normalized) {
           skipped += 1;
@@ -239,12 +253,15 @@ router.post("/:method", authMiddleware, (req, res) => {
           }
         }
       });
-      tx(importRows);
+      for (let index = 0; index < importRows.length; index += BULK_IMPORT_CHUNK_SIZE) {
+        tx(importRows.slice(index, index + BULK_IMPORT_CHUNK_SIZE));
+      }
 
       return res.json([String(added), String(skipped)]);
     }
 
     if (method === "searchProducts") {
+      const limit = parseLimit(100);
       const term = `%${b.term ?? ""}%`;
       return res.json(
         db
@@ -342,6 +359,8 @@ router.post("/:method", authMiddleware, (req, res) => {
       );
 
     if (method === "getTransactionsForCustomer")
+      {
+        const limit = parseLimit(500, 5000);
       return res.json(
         db
           .prepare(
@@ -350,6 +369,7 @@ router.post("/:method", authMiddleware, (req, res) => {
           .all(Number(b.customerId), userId, limit, offset)
           .map(rowTransaction),
       );
+      }
 
     // ── Balance / Analytics ────────────────────────────────────
     if (method === "getCustomerBalanceSummary") {

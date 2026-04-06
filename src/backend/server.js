@@ -14,7 +14,13 @@ import apiRoutes from "./routes/api.js";
 
 // ── Configuration ──────────────────────────────────────────────
 const PORT = Number(process.env.PORT || 3001);
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+const ALLOWED_ORIGIN = String(process.env.ALLOWED_ORIGIN || "").trim();
+const NODE_ENV = String(process.env.NODE_ENV || "development").trim();
+const isLocalDev = NODE_ENV === "development" || NODE_ENV === "test";
+const ALLOWED_ORIGINS = ALLOWED_ORIGIN
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const FRONTEND_DIST = path.join(process.cwd(), "src", "frontend", "dist");
 const HAS_FRONTEND_DIST = fs.existsSync(path.join(FRONTEND_DIST, "index.html"));
 const TMP_UPLOADS = path.join(process.cwd(), "tmp", "uploads");
@@ -40,11 +46,31 @@ try {
 // ── Express App ────────────────────────────────────────────────
 const app = express();
 
-// CORS — restrict in production
-if (ALLOWED_ORIGIN === "*") {
+// CORS — safe defaults:
+// - local dev/test: allow all origins (for easy frontend iteration)
+// - non-local envs: require explicit ALLOWED_ORIGIN
+if (ALLOWED_ORIGINS.length > 0) {
+  app.use(
+    cors({
+      origin(origin, callback) {
+        // Non-browser requests can omit Origin
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        if (ALLOWED_ORIGINS.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error(`CORS origin not allowed: ${origin}`));
+      },
+    }),
+  );
+} else if (isLocalDev) {
   app.use(cors());
 } else {
-  app.use(cors({ origin: ALLOWED_ORIGIN }));
+  console.error("FATAL: ALLOWED_ORIGIN must be set outside local development/test.");
+  process.exit(1);
 }
 
 app.use(express.json({ limit: "2mb" }));
@@ -90,7 +116,7 @@ if (HAS_FRONTEND_DIST) {
 app.use((error, _req, res, _next) => {
   console.error(error);
   if (error?.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ error: "File too large. Maximum CSV size is 10MB." });
+    return res.status(413).json({ error: "File too large. Maximum CSV size is 25MB." });
   }
   if (res.headersSent) {
     return undefined;
