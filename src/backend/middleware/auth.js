@@ -2,9 +2,11 @@ import jwt from "jsonwebtoken";
 import db from "../db.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-change-me";
+const NODE_ENV = String(process.env.NODE_ENV || "development").trim();
+const isLocalDev = NODE_ENV === "development" || NODE_ENV === "test";
 
-if (JWT_SECRET === "dev-change-me" && process.env.NODE_ENV === "production") {
-  console.error("FATAL: Set JWT_SECRET environment variable in production.");
+if (JWT_SECRET === "dev-change-me" && !isLocalDev) {
+  console.error("FATAL: Set a strong JWT_SECRET outside local development/test.");
   process.exit(1);
 }
 
