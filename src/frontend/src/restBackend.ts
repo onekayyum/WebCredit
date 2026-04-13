@@ -57,6 +57,7 @@ function mapBalance(b: any): CustomerBalance {
 async function invoke(method: string, payload: object = {}): Promise<any> {
   const url = buildApiUrl(`/api/backend/${method}`);
   const token = getToken();
+  console.log("Calling:", url);
   console.log(`[API] POST ${url}`);
 
   try {
@@ -70,6 +71,8 @@ async function invoke(method: string, payload: object = {}): Promise<any> {
     });
 
     console.log(`[API] ${method} → ${response.status}`);
+    const contentType = response.headers.get("content-type");
+    console.log("[API] Response content-type:", contentType);
 
     if (response.status === 401) {
       clearAuthSession();
@@ -80,6 +83,12 @@ async function invoke(method: string, payload: object = {}): Promise<any> {
       const text = await response.text();
       console.error(`[API] ${method} failed:`, text);
       throw new Error(text || `Request failed: ${response.status}`);
+    }
+
+    if (contentType && contentType.includes("text/html")) {
+      throw new Error(
+        "API returned HTML instead of JSON. Check API_BASE or routing.",
+      );
     }
 
     return response.json();
@@ -127,6 +136,8 @@ export function createRestBackend(): backendInterface {
           }
         };
         xhr.onload = () => {
+          const contentType = xhr.getResponseHeader("content-type");
+          console.log("[API] importProductsCsv content-type:", contentType);
           if (xhr.status === 401) {
             clearAuthSession();
             reject(new Error("Session expired. Please login again."));
@@ -135,6 +146,14 @@ export function createRestBackend(): backendInterface {
           if (xhr.status < 200 || xhr.status >= 300) {
             reject(
               new Error(xhr.responseText || `Import failed (${xhr.status})`),
+            );
+            return;
+          }
+          if (contentType && contentType.includes("text/html")) {
+            reject(
+              new Error(
+                "API returned HTML instead of JSON. Check API_BASE or routing.",
+              ),
             );
             return;
           }
