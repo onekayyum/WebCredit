@@ -89,11 +89,14 @@ export function AuthProvider({
       setLoginError(undefined);
       try {
         const url = buildApiUrl(path);
+        console.log("Calling:", url);
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username.trim(), password }),
         });
+        const contentType = response.headers.get("content-type");
+        console.log("[Auth] Response content-type:", contentType);
 
         if (!response.ok) {
           const text = await response.text();
@@ -108,6 +111,12 @@ export function AuthProvider({
             // keep plain-text response
           }
           throw new Error(message);
+        }
+
+        if (contentType && contentType.includes("text/html")) {
+          throw new Error(
+            "API returned HTML instead of JSON. Check API_BASE or routing.",
+          );
         }
 
         const data = await response.json();
