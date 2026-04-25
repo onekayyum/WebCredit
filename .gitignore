@@ -1,7 +1,17 @@
 node_modules/
 src/frontend/node_modules/
+src/frontend/dist/
+android/app/build/
+android/build/
+*.apk
+*.keystore
 data/
+tmp/
 .DS_Store
 .env
 .env.local
 .env.*.local
+*.log
+*.pem
+.vscode/
+.idea/
