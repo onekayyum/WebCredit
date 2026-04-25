@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches:
-      - newreview-branch-for-improvements-and-fixes-lnbxb3
+      - deployment-ready
 
 jobs:
   build:
